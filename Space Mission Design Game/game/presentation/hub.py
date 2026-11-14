@@ -43,6 +43,8 @@ class Hub:
         self.targets = []
         self.design_session = DesignSession()
         self.design_panel = None
+        from game.presentation.mission import MissionUI
+        self.mission=MissionUI(self)
         self._world()
         self._hud()
         camera.fov = 75
@@ -140,7 +142,7 @@ class Hub:
         self.location = Text('MISSION CONTROL', parent=self.hud, position=(.38,.465), scale=.7, color=MUTED)
         self.task = Text('EXPLORE / Open the Learning Lab ahead', parent=self.hud, position=(-.76,.425), scale=.72)
         Entity(parent=self.hud, model='quad', y=-.445, scale=(1.6,.11), color=color.rgba32(5,13,24,235))
-        Text('ARROWS  Move     A/D  Turn     E  Interact     ESC  Pause', parent=self.hud,
+        Text('ARROWS  Move     A/D  Turn     E  Interact     M  Mission     ESC  Pause', parent=self.hud,
              position=(-.76,-.422), scale=.69, color=MUTED)
         self.resources=Text('',parent=self.hud,position=(-.76,-.463),scale=.58,color=CYAN)
         self.refresh_resources()
@@ -163,6 +165,8 @@ class Hub:
         return min(result)[1] if result else None
 
     def tick(self, dt):
+        self.mission.tick(dt)
+        if self.mission.flight is not None: return
         self.elapsed += dt
         self.frames += 1
         self.earth.rotation_y += dt*8
@@ -184,6 +188,9 @@ class Hub:
             self.task.text=f'DESIGN / {passed}/8 preview checks pass  |  Learn in the Lab or revise in the bay'
         else:
             self.task.text=f'EXPLORE / {len(self.read_cards)}/10 concepts opened  |  Design bay on your right'
+        if self.mission.campaign.stage:
+            stage=self.mission.campaign.stage
+            self.task.text=f'MISSION / {min(stage+1,5)}/5  |  '+('Complete - M to review or retry' if stage==5 else 'M opens current objective and saves')
         self.reticle.enabled = self.modal is None
         if self.modal:
             self.prompt.text=''
@@ -198,6 +205,11 @@ class Hub:
         self.notice_until=self.elapsed+3
 
     def handle_input(self,key):
+        if self.modal=='flight':
+            if key in ('escape','enter'): self.mission.finish_flight()
+            return
+        if key=='m' and self.modal is None:
+            self.mission.open(); return
         if self.modal == 'design':
             if key=='escape': self.close_panel()
             else: self.design_panel.handle_input(key)
@@ -229,8 +241,8 @@ class Hub:
         self.modal=kind
         mouse.locked=False
         self.panel=Entity(parent=camera.ui)
-        Entity(parent=self.panel, model='quad', scale=(4,3), z=.1, color=color.rgba32(2,7,14,215), collider='box')
-        Entity(parent=self.panel, model='quad', scale=(1.46,.82), color=NAVY)
+        self.panel_dim=Entity(parent=self.panel, model='quad', scale=(4,3), z=.1, color=color.rgba32(2,7,14,215), collider='box')
+        self.panel_background=Entity(parent=self.panel, model='quad', scale=(1.46,.82), color=NAVY)
         Entity(parent=self.panel, model='quad', position=(0,.397,-.01), scale=(1.46,.012),color=CYAN)
         Text(title,parent=self.panel,position=(-.67,.365,-.02),scale=1.3,color=CYAN)
         Text(subtitle,parent=self.panel,position=(-.67,.31,-.02),scale=.73,color=MUTED)
@@ -290,6 +302,7 @@ class Hub:
         self.events.append('design_opened')
 
     def design_changed(self):
+        self.mission.campaign.changed()
         self.spacecraft.apply(self.design_session.design)
         self.refresh_resources()
         self.events.append('design_changed')
@@ -303,7 +316,10 @@ class Hub:
                              f"Data {value['delivered_mb']:.0f}/{value['expected_data_mb']:.0f} MB")
 
     def close_panel(self):
+        if self.mission.flight is not None:
+            self.mission.finish_flight(); return
         self.events.append('panel_closed')
+        self.panel.enabled=False
         destroy(self.panel)
         self.panel=None
         self.modal=None

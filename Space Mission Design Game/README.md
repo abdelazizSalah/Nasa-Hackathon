@@ -1,4 +1,27 @@
-# Mission Forge - Phase 3
+# Mission Forge - playable campaign
+
+## Complete mission and five-minute presentation
+
+Press **M** during exploration to open Mission Control. The five objectives unlock consecutively. Open a Lab card first, then use Complete Current Task to accept the brief. Build a feasible spacecraft, validate its orbit/ground configuration, and pass integrated readiness. Launch & Operate becomes available only for that exact approved configuration. Any component change invalidates readiness and returns you to design review.
+
+Mission Control offers **Save**, **Load**, and **New Mission**. Saves are versioned JSON under `runtime/campaign.json`; loading revalidates readiness. These are local files, not cloud accounts. The latest result is in `runtime/mission-report.json`; the debrief compares the preceding attempt during the same campaign.
+
+The source toggle explicitly selects **Cached** or **Live** GMAT. Both supported cached trajectories were generated with the installed R2026a console and ship under `content/orbit_cache/`, keyed by input settings. Cached mode needs no GMAT install or network. Live mode runs GMAT in a worker thread via a separate console process, preserves script/report/log provenance in runtime, and shows errors without secretly switching providers. Regional: SMA 7000 km, inclination 28.5 degrees. Wide: SMA 7200 km, inclination 98 degrees. Each report has 601 samples covering 36000 seconds. These geometric orbits differ from Phase 3's deliberately curated resource-preview timings.
+
+Operations derives contacts, target visibility and eclipses from the actual trajectory timestamps/positions. Coordinates are EarthMJ2000Eq, km, s; display maps inertial Z upward. A rotating equatorial station/target starts at epoch-relative longitude zero, rather than a geolocated real facility. Contact minimum elevation is 5 degrees; observation region is within 35 degrees of the target's radial direction. A fixed Sun along +X and cylindrical Earth shadow approximate illumination. Earth radius is 6378.137 km; spin rate is 7.292115e-5 rad/s. These short-run educational geometry assumptions are not precision access analysis.
+
+The operational goal is at least **60 MB delivered**, no storage loss, and no unmet electrical load over the assessment window. **Targeted** imaging stops at 120 MB. **Continuous** imaging demonstrates how otherwise viable hardware can overflow storage. Retry with a different plan or revise the spacecraft. Battery, storage, contacts, delivered data and satellite movement use the same simulation timeline. Launch animation is illustrative; readiness failure blocks launch rather than causing an unrelated crash. Skip/Enter/Escape during playback goes to the calculated result.
+
+Suggested presentation: 0:00-0:30 explain flood response; 0:30-1:10 walk into the Lab and read one card; 1:10-2:30 demonstrate Advanced -> Extended -> Heavy -> Fast and undo; 2:30-3:00 complete the mission reviews using a passing design; 3:00-4:15 show launch/orbit with cached GMAT, eclipse/contact telemetry, and the debrief; 4:15-5:00 explain coupled trade-offs and compare a Continuous failure with Targeted repair. Use Skip to fit the time limit. There is no hidden mission-unlock bypass.
+
+Windows checks: 21 unit tests, 14 design integration checks, 11 hub checks, cached end-to-end campaign rendering, and live GMAT worker-to-result flow passed. Arch Linux and a second-machine clean install remain **unverified**. Run the same bootstrap and checks there; cached mode isolates the game from GMAT native-library differences. Do not treat the shared Python codebase as proof that Arch graphics/GMAT will work.
+
+```powershell
+.\.venv\Scripts\python.exe scripts/verify_campaign.py
+.\.venv\Scripts\python.exe scripts/verify_campaign.py --live
+```
+
+The graphical harness saves QA frames in ignored runtime files and exercises campaign completion and revalidation. `--live` requires a configured native GMAT install. All visual geometry is procedural; no remote asset download or Blender is required. Multiplayer remains intentionally deferred.
 
 Current navigation: Up/Down move forward/backward; Left/Right strafe sideways relative to your heading. A turns left and D turns right. The mouse stays free for interface controls and does not turn the camera. Reading/pause/design panels freeze movement and turning. Panel arrow controls still select cards/options. This supersedes earlier mouse-look and turn-with-arrows descriptions.
 

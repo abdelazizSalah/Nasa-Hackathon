@@ -1,6 +1,8 @@
 # Mission Forge - project tracker and handoff
 
-Updated: 2026-11-14. Current checkpoint: Phase 3 implemented and Windows-verified; awaiting user manual review. User approved Phase 3 after reviewing Phase 2. Phase 4 is not authorized. Arch Linux tests remain pending.
+Updated: 2026-11-14. Remaining single-player gameplay is implemented and Windows-verified. Phases 4-6 have working campaign, live/cached GMAT, launch and results. Phase 7 Windows verification/documentation is done; Arch and second-machine clean-install validation remain pending external access.
+
+LATEST AUTHORIZATION: User said "finish all the remaining phases, only contact me when you need permissions". This supersedes every older instruction in this tracker to pause for phase approvals. Continue fixes autonomously; ask only for genuinely necessary permissions. Do not mark Arch validation passed without evidence.
 
 ## Read first
 
@@ -30,10 +32,10 @@ Record statuses distinctly: proposed, approved, in progress, implemented, manual
 | 1 | Setup scripts, engine window, standalone GMAT proof | Accepted for continuation | User: "Very good, lets go to phase 2 :)"; Windows evidence retained; Arch pending |
 | 2 | 3D hub, arrows/camera, Lab door and cards | Accepted for continuation | User: "Very cool, now lets go to phase 3"; Windows evidence retained; Arch pending |
 | 3 | Configuration and visible trade-off engine | Implemented; user review pending | 17 unit tests, 14 design and 11 hub graphical integration checks; desktop trade-off chain inspected |
-| 4 | Five consecutive missions, readiness, saves | Proposed | None |
-| 5 | GMAT bridge and orbital/resource operations | Proposed | None |
-| 6 | Launch gallery, spectators, feedback and report | Proposed | None |
-| 7 | Windows/Linux checks, offline demo and rehearsal | Proposed | None |
+| 4 | Five consecutive missions, readiness, saves | Implemented; Windows verified | Gate/save/revalidation tests and end-to-end harness |
+| 5 | GMAT bridge and orbital/resource operations | Implemented; Windows verified | Both real GMAT presets, input-keyed cached data, live worker/game flow |
+| 6 | Launch gallery, spectators, feedback and report | Implemented; Windows verified | Rendered launch/orbit/report, targeted success and continuous failure |
+| 7 | Windows/Linux checks, offline demo and rehearsal | Windows checks/docs done; Arch pending | 21 tests, graphics harnesses, offline caches; no remote Arch access |
 
 ## Completed work
 
