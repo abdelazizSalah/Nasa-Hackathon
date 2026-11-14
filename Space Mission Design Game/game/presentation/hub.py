@@ -116,20 +116,12 @@ class Hub:
         self.spacecraft.apply(self.design_session.design)
         self.targets.append(('design',(4.2,0,-.3)))
 
-        self.box((0,1.7,13.75), (11,2.6,.1), color.rgb32(15,41,57), shader=False)
-        self.label('THE LEARNING LAB', (0,3.2,13.63), .23, CYAN)
-        self.label('TEN IDEAS. ONE CONNECTED MISSION.', (0,2.78,13.63), .11)
-        for i, card in enumerate(self.cards):
-            x = -4.3+(i%5)*2.15
-            y = 2.15-(i//5)*.95
-            self.box((x,y,13.6), (1.92,.78,.07), color.rgb32(29,72,91), shader=False)
-            title = '\n'.join(textwrap.wrap(card['title'],20))
-            self.label(f'{i+1:02d}', (x-.7,y+.23,13.53), .1, CYAN)
-            self.label(title, (x,y-.03,13.52), .08)
+        from game.library.view import world_shelves
+        world_shelves(self)
         self.box((0,.6,10.5), (2.7,1.2,1.0), solid=True)
         self.box((0,1.22,10.5), (2.6,.05,.95), color.rgb32(18,70,85), shader=False)
         self.box((0,1.25,10.02), (2.4,.025,.025), CYAN, shader=False)
-        self.label('E / OPEN CARD LIBRARY', (0,.85,9.97), .12, CYAN)
+        self.label('E / OPEN BOOK LIBRARY', (0,.85,9.97), .12, CYAN)
         self.targets.append(('library',(0,0,9.5)))
         self.label('LEARN  >  DESIGN  >  VERIFY', (0,2.7,-6.78), .19, CYAN, rotation_y=180)
         self.label('ARROWS: MOVE     A/D: TURN     E: INTERACT', (0,2.2,-6.77), .11, rotation_y=180)
@@ -220,11 +212,7 @@ class Hub:
             else: self.design_panel.handle_input(key)
             return
         if self.modal == 'learning':
-            if key=='escape': self.close_panel()
-            elif key in ('up arrow','left arrow'): self.select_card((self.card_index-1)%len(self.cards))
-            elif key in ('down arrow','right arrow','tab'): self.select_card((self.card_index+1)%len(self.cards))
-            elif key=='enter': self.select_card(self.card_index)
-            elif key=='r': self.open_source()
+            self.library.handle_input(key)
             return
         if self.modal:
             if key in ('escape','enter'): self.close_panel()
@@ -256,46 +244,26 @@ class Hub:
         self.close_button = Button('CLOSE / ESC',parent=self.panel,position=(.57,.35,-.03),scale=(.22,.055),color=color.rgb32(31,59,77),text_size=.7,on_click=self.close_panel)
 
     def open_library(self):
-        self.panel_base('learning','LEARNING LAB','Choose a card. Movement is paused while you read.')
-        self.card_buttons=[]
-        for i,card in enumerate(self.cards):
-            button=Button(f'{i+1:02d}  {card["title"]}',parent=self.panel,position=(-.45,.225-i*.05,-.02),
-                          scale=(.43,.044),color=color.rgb32(23,43,62),text_size=.69,
-                          on_click=lambda index=i:self.select_card(index))
-            self.card_buttons.append(button)
-        self.detail=Entity(parent=self.panel)
+        from game.library.view import LibraryController
+        self.panel_base('learning','AEROSPACE FIELD LIBRARY','Choose a physical book / 12 volumes / offline lessons and original diagrams')
+        self.library=LibraryController(self)
+        self.close_button.on_click=self.library.exit
         self.select_card(self.card_index)
         self.events.append('library_opened')
 
     def select_card(self,index):
         self.card_index=index
-        card=self.cards[index]
-        self.read_cards.add(card['id'])
-        if self.network.active:self.network.send('read',card=card['id'])
-        self.events.append('card:'+card['id'])
-        for i,button in enumerate(self.card_buttons):
-            button.color=color.rgb32(29,100,116) if i==index else color.rgb32(23,43,62)
-        destroy(self.detail)
-        self.detail=Entity(parent=self.panel)
-        def text(value,x,y,scale=.86,tint=WHITE,width=62):
-            return Text('\n'.join(textwrap.wrap(value,width)),parent=self.detail,position=(x,y,-.04),scale=scale,color=tint)
-        text(card['category'],-.17,.232,.68,CYAN)
-        text(card['title'],-.17,.192,1.17,WHITE)
-        text(card['summary'],-.17,.13)
-        text('IN PRACTICE',-.17,.005,.65,CYAN)
-        text(card['example'],-.17,-.03)
-        text('THE TRADE-OFF',-.17,-.15,.65,AMBER)
-        text(card['impact'],-.17,-.185,.83,WHITE)
-        text(card['source_label'],-.17,-.30,.58,MUTED,width=72)
-        Button('OPEN NASA SOURCE / R',parent=self.detail,position=(.25,-.365,-.04),scale=(.72,.05),text_size=.7,
-               color=color.rgb32(26,70,86),on_click=self.open_source)
-        Text('ARROWS / TAB  Select     ENTER  Read',parent=self.detail,position=(-.67,-.35,-.04),scale=.60,color=MUTED)
-        Text('All examples are educational; no online resource is needed to play.',parent=self.detail,
-             position=(-.67,-.385,-.04),scale=.55,color=MUTED)
+        # Preserve the ten original concept receipts and their existing network protocol.
+        # The two additional books never add campaign requirements or network messages.
+        if 0 <= index < len(self.cards):
+            card=self.cards[index]
+            self.read_cards.add(card['id'])
+            if self.network.active:self.network.send('read',card=card['id'])
+            self.events.append('card:'+card['id'])
+        self.library.select(index)
 
     def open_source(self):
-        # Only an explicit button/key action opens the optional external reference.
-        webbrowser.open(self.cards[self.card_index]['source_url'])
+        self.library.references(0)
 
     def open_pause(self):
         self.panel_base('pause','MISSION PAUSED','Explore the hub at your own pace.')
@@ -327,6 +295,7 @@ class Hub:
     def close_panel(self):
         if self.mission.flight is not None:
             self.mission.finish_flight(); return
+        if self.modal=='learning':self.library.dispose()
         self.events.append('panel_closed')
         self.panel.enabled=False
         destroy(self.panel)
