@@ -16,7 +16,7 @@ class DesignTests(unittest.TestCase):
         upgraded=evaluate(self.catalog,Design(sensor='advanced'))
         self.assertTrue(base.passed)
         self.assertGreater(upgraded.values['quality'],base.values['quality'])
-        for key in ('mass_kg','cost_credits','peak_power_w','expected_data_mb'):
+        for key in ('mass_kg','cost_eur','peak_power_w','expected_data_mb'):
             self.assertGreater(upgraded.values[key],base.values[key])
         self.assertEqual({check.code for check in upgraded.failures},{'power','delivery'})
 

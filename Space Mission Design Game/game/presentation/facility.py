@@ -1,24 +1,27 @@
 """Connected workshops and integration UI around existing mission/design services."""
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import json
 import math
 import textwrap
 from ursina import Entity, Text, Button, color, destroy, camera, scene
+from game.domain.design import evaluate
+from game.domain.economy import eur
 from game.domain.assembly import Assembly, ROLES, CATEGORIES, assignments, owned, missions
 from game.domain.facility_layout import ROOMS, station_position, integration_target
 from game.domain.locomotion import Volume
 from game.domain.navigation import Obstacle
-from game.presentation.carried import Part, set_carried
+from game.presentation.carried import Part, set_carried, stacked_inventory
 
 CYAN=color.rgb32(64,216,222)
 AMBER=color.rgb32(255,190,89)
+RED=color.rgb32(255,70,85)
 MUTED=color.rgb32(155,180,199)
 
 class Facility:
     def __init__(self,hub):
         self.hub=hub;self.solo=Assembly();self.shared=None;self.signature=None;self.table_obstacles=[]
         self.tables=Entity();self.placements=Entity();self.local_hand=Entity(parent=camera)
-        self.volumes=[];self.elapsed=0;self.detail_category='sensor';self.feedback_page=0;self.message=''
+        self.volumes=[];self.elapsed=0;self.detail_category='sensor';self.feedback_page=0;self.message='';self.plan_category='orbit'
         self.build()
         self.refresh_world()
 
@@ -89,8 +92,14 @@ class Facility:
         h.box((76,.55,11.5),(1.8,1.1,1),solid=True)
         self.label('MISSION PLAN\nORBIT + LAUNCHER',(76,1.5,11.1),.08)
         h.targets.append(('plan-submit',(76,0,10.4)))
-        self.integration_sign=self.label('',(72,2.2,13.8),.10)
+        h.box((68,1.88,13.64),(5.5,2.6,.12),color.rgb32(6,16,25),shader=False)
+        self.integration_sign=Text('',parent=scene,position=(65.45,2.98,13.54),scale=6.2,color=CYAN)
+        self.integration_budget=Text('',parent=scene,position=(65.45,2.65,13.53),scale=4.2,color=CYAN)
+        self.integration_details=Text('',parent=scene,position=(65.45,2.30,13.53),scale=4.0,color=RED)
         h.targets.append(('validate',(72,0,6.5)))
+        h.targets.append(('issues-display',(68,0,9.8)))
+        h.box((68,.55,12),(1.8,1.1,.7),color.rgb32(22,52,68),solid=True)
+        self.label('E / VALIDATION SCREEN',(68,1.12,11.59),.055)
         h.targets.append(('launch-console',(76,0,6.5)))
         self.label('E / HOST VALIDATION',(72,.5,7.92),.095)
         h.box((76,.55,5.2),(1.8,1.1,1),solid=True)
@@ -112,12 +121,14 @@ class Facility:
         if h.network.active:h.network.send(action,**fields);return
         s=h.design_session;c=fields.get('category')
         try:
-            if action=='mission':self.solo.select_mission(fields['mission']);h.read_cards.add('purpose')
+            if action=='mission':self.solo.select_mission(fields['mission'],s);h.read_cards.add('purpose');h.refresh_resources()
             elif action=='choose':
                 if s.choose(c,fields['option']):h.design_changed()
             elif action=='confirm':self.solo.confirm(s,c,self.player)
             elif action=='carry':self.solo.carry(s,self.player,self.players,c)
             elif action=='submit':self.solo.submit(s,c,self.player,self.players)
+            elif action=='remove':
+                self.solo.remove(s,c,self.player,self.players);h.mission.campaign.changed()
             elif action=='validate':
                 if self.solo.validate(s,self.players):
                     while h.mission.campaign.stage<4:
@@ -156,9 +167,7 @@ class Facility:
             part=Part(c,s.design,parent=self.placements,position=(x,1.6,z+.35),scale=.4)
             part.destination_y=1.2 if c in ('orbit','launcher') else 1.45
             self.label(c+' / '+item['by'],(x,1.65,z+.1),.05,CYAN,self.placements)
-        ready_roles=sum(all(c in state['submitted'] for c in cs) for _,cs in ROLES.values())
-        waiting=[r for r,(_,cs) in ROLES.items() if not all(c in state['submitted'] for c in cs)]
-        self.integration_sign.text=f'{ready_roles} OF 4 ENGINEERING ROLES SUBMITTED\n'+('SPACECRAFT DESIGN APPROVED' if state['ready'] else 'Waiting: '+', '.join(waiting) if waiting else 'READY FOR HOST VALIDATION')
+        self.update_screen(state)
         self.mission_sign.text='MISSION SELECT\n'+('Flood Watch / SELECTED' if state['mission'] else 'Flood Watch / available')
 
     def tick(self,dt):
@@ -166,9 +175,10 @@ class Facility:
         state=self.state
         signature=json.dumps((state,asdict(self.hub.design_session.design),{p:v['name'] for p,v in self.players.items()}),sort_keys=True)
         if signature!=self.signature:self.signature=signature;self.refresh_world()
-        category=state['carried'].get(self.player)
-        set_carried(self.local_hand,category,self.hub.design_session.design,True)
+        inventory=stacked_inventory(state,self.player)
+        set_carried(self.local_hand,inventory,self.hub.design_session.design,True)
         self.local_hand.enabled=self.hub.modal is None
+        self.update_screen(state)
         for part in self.placements.children:
             if hasattr(part,'destination_y'):part.y=max(part.destination_y,part.y-dt*.5)
         if self.hub.modal is None:
@@ -181,9 +191,33 @@ class Facility:
                 title,_,_=next(room for room in ROOMS if missing[0] in room[2])
                 message='CONFIGURE / '+title+' / Confirm '+missing[0]+' at its assigned workstation'
             elif len(state['submitted'])<5:message=f'INTEGRATE / {len(state["submitted"])}/5 contributions submitted / I opens your carried inventory'
+            elif state['issues']:message='REVISE / Read the RED screen on the left of Integration / E retrieves a placed part'
             elif not state['ready']:message='VALIDATE / Approach the central integration console / host approval required'
             else:message='APPROVED / Walk to Launch Readiness and launch with the flight engineer'
             self.hub.task.text=message
+
+    def update_screen(self,state):
+        issues=state['issues'];count=len(state['submitted'])
+        self.integration_sign.color=RED if issues else CYAN
+        self.integration_sign.text=('DESIGN APPROVED' if state['ready'] else 'VALIDATION FAILED' if issues else
+                                    'READY FOR VALIDATION' if count==5 else 'AWAITING CONTRIBUTIONS')
+        remaining=state['budget_eur']-state['cost_eur']
+        self.integration_budget.color=RED if remaining<0 else CYAN
+        self.integration_budget.text=f"Cost {eur(state['cost_eur'])} / Budget {eur(state['budget_eur'])}\n"+('OVER BUDGET: '+eur(-remaining) if remaining<0 else 'Available: '+eur(remaining))+f' / Placed {count}/5'
+        if issues:
+            page=int(self.elapsed/7)%math.ceil(len(issues)/2);visible=issues[page*2:page*2+2]
+            lines=[]
+            for issue in visible:
+                lines.append('REVISE / '+issue['label'].upper())
+                lines.extend(textwrap.wrap(issue['explanation'],58))
+                lines.extend(textwrap.wrap('Return to: '+', '.join(issue['categories']),58))
+                lines.extend(textwrap.wrap(issue['advice'],58));lines.append('')
+            if len(issues)>2:lines.append(f'Issues {page*2+1}-{min(page*2+2,len(issues))} of {len(issues)} / auto scroll')
+            self.integration_details.color=RED;self.integration_details.text='\n'.join(lines)
+        else:
+            self.integration_details.color=CYAN
+            self.integration_details.text='\n'.join(c.upper()+' / '+('SUBMITTED' if c in state['submitted'] else 'AWAITING PLACEMENT') for c in CATEGORIES)
+            self.integration_details.text+='\n\n'+('Flight engineer: proceed to Launch Readiness.' if state['ready'] else 'E places / removes parts at their marked locations.\nSubmit all choices, then ask the host to validate.')
 
     def nearby(self):
         h=self.hub
@@ -192,23 +226,25 @@ class Facility:
                 x,z=station_position(categories[0],player,self.players)
                 if math.hypot(h.pose.x-x,h.pose.z-z)<2.5:return 'station:'+player+':'+categories[0]
         target=h.nearby()
-        return target if target in ('mission-select','controls-help','validate','plan-submit','launch-console') or (target or '').startswith('place:') else None
+        return target if target in ('mission-select','controls-help','validate','issues-display','plan-submit','launch-console') or (target or '').startswith('place:') else None
 
     def hint(self,target):
         if target.startswith('station:'):return 'Inspect workstation / '+target.split(':')[1]
-        if target.startswith('place:'):return 'Place '+target.split(':')[1]
-        return {'mission-select':'Select mission','controls-help':'Controls / SPACE jump / ALT crouch','validate':'Integration and host validation',
+        if target.startswith('place:'):
+            c=target.split(':')[1]
+            return ('Remove ' if c in self.state['submitted'] else 'Place ')+c
+        return {'mission-select':'Select mission','controls-help':'Controls / SPACE jump / ALT crouch','validate':'Integration and host validation','issues-display':'Read validation issues / host validation',
                 'plan-submit':'Submit orbit / launcher plan','launch-console':'Launch & Mission Control'}[target]
 
     def interact(self,target):
         if target.startswith('station:'):
             _,player,category=target.split(':');self.open_station(category,player)
         elif target.startswith('place:'):
-            category=target.split(':')[1];self.action('submit',category=category)
+            category=target.split(':')[1];self.action('remove' if category in self.state['submitted'] else 'submit',category=category)
         elif target=='plan-submit':self.open_submission()
         elif target=='mission-select':self.open_missions()
         elif target=='controls-help':self.open_help()
-        elif target=='validate':self.open_validation()
+        elif target in ('validate','issues-display'):self.open_validation()
         elif target=='launch-console':self.hub.mission.open()
 
     def panel(self,kind,title,subtitle):
@@ -226,7 +262,7 @@ class Facility:
         self.panel('missions','MISSION SELECT','Choose Flood Watch to begin / only the host selects the shared crew mission')
         for i,m in enumerate(missions()):
             y=.20-i*.23;self.txt(m['name']+(' / SELECTED' if self.state['mission']==m['id'] else ''),-.64,y,1,CYAN if m['available'] else MUTED)
-            self.txt(m['description'],-.64,y-.055,.76,MUTED)
+            self.txt(m['description']+(' / Mission budget: '+eur(m['budget_eur']) if m['available'] else ''),-.64,y-.055,.76,MUTED)
             self.btn('SELECT MISSION' if m['available'] else 'COMING SOON',.40,y-.13,.42,lambda mid=m['id']:self.action('mission',mission=mid),not m['available'] or not self.host())
 
     def open_directory(self):
@@ -245,22 +281,34 @@ class Facility:
             x=-.63+i*.65;chosen=option['id']==getattr(s.design,category)
             self.txt(option['name']+(' / SELECTED' if chosen else ''),x,.17,.88,CYAN if chosen else color.white,width=41)
             self.txt(option['description'],x,.10,.73,MUTED,width=46)
-            specs=' / '.join(f'{k.replace("_"," ")}: {v}' for k,v in option.items() if k not in ('id','label','name','description'))
-            self.txt(specs,x,-.015,.67,color.white,width=49)
+            price=option.get('cost_eur',option.get('ground_cost_eur',0))
+            self.txt('PRICE '+eur(price)+(' / ground service' if category=='orbit' else ''),x,.045,.78,CYAN)
+            projected=evaluate(s.catalog,replace(s.design,**{category:option['id']})).values['cost_eur']
+            remaining=s.catalog['scenario']['budget_eur']-projected
+            self.txt('Total '+eur(projected)+' / '+('Remaining '+eur(remaining) if remaining>=0 else 'OVER by '+eur(-remaining)),x,-.025,.66,RED if remaining<0 else MUTED,width=47)
+            specs=' / '.join(f'{k.replace("_"," ")}: {v}' for k,v in option.items() if k not in ('id','label','name','description','cost_eur','ground_cost_eur'))
+            self.txt(specs,x,-.07,.61,color.white,width=49)
             self.btn('SELECT '+option['label'].upper(),x+.27,-.16,.52,lambda c=category,o=option['id']:self.action('choose',category=c,option=o),not allowed)
-        self.btn('CONFIRM & COLLECT',-.30,-.26,.60,lambda:self.action('confirm',category=category),not allowed)
+        self.btn('CONFIRM & COLLECT',-.30,-.26,.60,lambda:self.action('confirm',category=category),not allowed or s.preview.values['cost_eur']>s.catalog['scenario']['budget_eur'])
         if category in ('orbit','launcher'):
             other='launcher' if category=='orbit' else 'orbit'
             self.btn('VIEW '+other.upper(),.36,-.26,.50,lambda:self.open_station(other,self.station_player))
-        state=self.state;status='Confirmed / carry to integration' if state['confirmed'].get(category)==getattr(s.design,category) else 'Awaiting explicit confirmation'
-        self.txt(status+' / Return through earlier rooms at any time.',-.64,-.34,.66,MUTED)
+        state=self.state;status='Confirmed / stacked with your carried parts' if state['confirmed'].get(category)==getattr(s.design,category) else 'Awaiting explicit confirmation'
+        over=s.preview.values['cost_eur']>s.catalog['scenario']['budget_eur']
+        if over:status='OVER BUDGET / reduce costs before collecting'
+        self.txt(status+' / Budget '+eur(s.catalog['scenario']['budget_eur'])+' / Total '+eur(s.preview.values['cost_eur']),-.64,-.34,.66,RED if over else MUTED)
 
     def open_submission(self):
-        self.panel('submission','MISSION PLAN SUBMISSION','Orbit and launcher are planning choices, not hardware inside the satellite.')
+        self.panel('submission','MISSION PLAN SUBMISSION','Left/right: select plan / E: submit or remove the selected plan / Esc: close')
         for i,c in enumerate(('orbit','launcher')):
-            self.txt(c.upper()+' / '+getattr(self.hub.design_session.design,c),-.63,.20-i*.18,.95,CYAN)
-            self.btn('SUBMIT '+c.upper(),.35,.14-i*.18,.52,lambda category=c:self.action('submit',category=category),not self.can(c) or c in self.state['submitted'])
+            self.txt(('SELECTED / ' if c==self.plan_category else '')+c.upper()+' / '+getattr(self.hub.design_session.design,c),-.63,.20-i*.18,.95,CYAN)
+            self.btn(('REMOVE ' if c in self.state['submitted'] else 'SUBMIT ')+c.upper()+' / E',.35,.14-i*.18,.52,lambda category=c:self.action('remove' if category in self.state['submitted'] else 'submit',category=category),not self.can(c))
         self.txt('Each contribution is tied to the current confirmed selection.',-.63,-.27,.75,MUTED)
+
+    def handle_plan_input(self,key):
+        if key in ('left arrow','right arrow'):
+            self.plan_category='launcher' if self.plan_category=='orbit' else 'orbit';self.open_submission()
+        elif key=='e':self.action('remove' if self.plan_category in self.state['submitted'] else 'submit',category=self.plan_category)
 
     def open_validation(self,page=0):
         self.feedback_page=page
@@ -269,11 +317,11 @@ class Facility:
         reports=sorted(state['validation'],key=lambda r:r['passed'])
         failures=sum(not r['passed'] for r in reports)
         title='SPACECRAFT DESIGN APPROVED' if state['ready'] else f'VALIDATION NEEDS REVISION / {failures} failed checks' if failures else f'{len(state["submitted"])}/5 choices submitted / host validation required'
-        self.txt(title,-.63,.235,1,CYAN if not failures else AMBER)
+        self.txt(title,-.63,.235,1,CYAN if not failures else RED)
         if reports:
             report=reports[page%len(reports)]
-            self.txt(('PASS / ' if report['passed'] else 'REVISE / ')+report['label'],-.63,.17,.95,CYAN if report['passed'] else AMBER)
-            self.txt(report['explanation'],-.63,.105,.80,color.white,width=100)
+            self.txt(('PASS / ' if report['passed'] else 'REVISE / ')+report['label'],-.63,.17,.95,CYAN if report['passed'] else RED)
+            self.txt(report['explanation'],-.63,.105,.80,RED if not report['passed'] else color.white,width=100)
             self.txt('Responsible roles: '+', '.join(ROLES[r][0] for r in report['roles']),-.63,.015,.72,MUTED,width=102)
             self.txt('Current owners: '+', '.join(report['players'])+' / Stations: '+', '.join(report['categories']),-.63,-.055,.71,MUTED)
             self.txt(report['advice'],-.63,-.115,.77,AMBER,width=100)
@@ -288,16 +336,16 @@ class Facility:
         self.panel('controls','FLIGHT DECK CONTROLS','Keyboard navigation / mouse stays free for books and consoles')
         lines=['[ W / S ]  Walk forward / backward','[ A / D ]  Strafe left / right','[ LEFT / RIGHT ARROWS ]  Turn camera left / right',
                '[ SPACE ]  Jump (grounded only)','[ LEFT / RIGHT ALT ]  Hold to crouch','[ E ]  Use a nearby door, station or placement location',
-               '[ I ]  Open carried-parts inventory','[ LEFT MOUSE ]  Select covers and interface buttons',
+               '[ I ]  Inventory / E places or removes a marked contribution','[ LEFT MOUSE ]  Select covers and interface buttons',
                '[ M ]  Mission tablet    [ N ]  LAN crew','[ ESC ]  Close menu / book / pause; mouse remains free']
         for i,line in enumerate(lines):self.txt(line,-.63,.23-i*.05,.76,CYAN if i in (3,4) else color.white)
 
     def open_inventory(self):
-        self.panel('inventory','CARRIED PARTS / YOUR ROLES',self.player+' / '+', '.join(ROLES[r][0] for r in assignments(self.players).get(self.player,[])))
+        self.panel('inventory','CARRIED STACK / YOUR ROLES',self.player+' / '+', '.join(ROLES[r][0] for r in assignments(self.players).get(self.player,[])))
         inventory=self.state['inventory'].get(self.player,[])
         for i,c in enumerate(inventory):
             self.txt(c.upper()+' / '+getattr(self.hub.design_session.design,c),-.63,.2-i*.09,.85,CYAN)
-            self.btn('CARRY',.42,.19-i*.09,.28,lambda category=c:self.action('carry',category=category))
+            self.btn('STACK BASE',.42,.19-i*.09,.28,lambda category=c:self.action('carry',category=category))
         if not inventory:self.txt('No unsubmitted confirmed parts. Confirm choices at your assigned workshop.',-.63,.16,.8,MUTED)
 
     def refresh_modal(self):

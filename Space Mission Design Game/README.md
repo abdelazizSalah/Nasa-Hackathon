@@ -1,5 +1,15 @@
 # Mission Forge - playable campaign
 
+## Latest update: retrieval, red diagnostics, stacked parts and euro budgets
+
+At a marked integration location, **E toggles placement/retrieval** of your own component. Retrieval returns it to your carried stack, preserves other contributions and invalidates approval. At the mission-plan desk, **left/right** selects orbit/launcher and **E** submits or retrieves that tablet. All confirmed, unsubmitted choices are now displayed in a vertical stack locally and on remote astronauts. **I > Stack Base** changes the lowest item.
+
+Read the large **red validation screen on the left of Integration** for current failures, actual values, return stations and suggestions. Approach it and use E for the detailed validation panel. The display updates after edits/retrieval, shows budget/remaining funds and rotates through multiple failures automatically.
+
+**Flood Watch has a EUR 145,000 budget**, defined by `budget_eur` and `currency: EUR` in `content/missions.json`. Canonical prices in `content/design_catalog.json` use `cost_eur`, `ground_cost_eur` and `baseline_cost_eur`. Each option shows its euro price, resulting full-design total and remaining/overspent euros. Overspend may be previewed but blocks collection, approval and launch. Old teaching amounts were scaled by 1,000, preserving their relative trade-offs; these are fictional educational prices. Historical credit examples below are superseded by the euro amounts. Retrieval does not cancel a design selection or refund its reserved price; choosing a cheaper replacement lowers the total. Restart all laptops with the same checkout after editing mission budgets/prices.
+
+**50 automated tests** pass, plus **14 rendered revision checks** and real four-client local networking checks. Run `python scripts/verify_integration_revision.py`; evidence is in ignored `runtime/integration-revision/`. Existing facility, design and cached campaign checks pass. Separate Wi-Fi laptops and Arch graphics remain manual acceptance. No additional install is needed.
+
 ## Current game: connected workshops and 1–4 player crews
 
 Start with the **Flood Watch** mission screen beside the Earth/orbit display in the original Spawn Room. Mission 02 is visibly disabled. The host selects the shared mission; solo players do the same. The original Library is still optional reading, with all twelve animated books preserved.

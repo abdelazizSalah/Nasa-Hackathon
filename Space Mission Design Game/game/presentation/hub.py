@@ -11,6 +11,7 @@ from ursina import (Entity, Text, Button, DirectionalLight, AmbientLight, camera
 from ursina.shaders import basic_lighting_shader, unlit_shader
 from game.domain.navigation import Pose, Obstacle, advance
 from game.domain.design import DesignSession
+from game.domain.economy import eur
 from game.presentation.spacecraft import Spacecraft
 from game.presentation.design_panel import DesignPanel
 
@@ -230,6 +231,8 @@ class Hub:
         if self.modal == 'learning':
             self.library.handle_input(key)
             return
+        if self.modal=='submission' and key in ('e','left arrow','right arrow'):
+            self.facility.handle_plan_input(key);return
         if self.modal:
             if key in ('escape','enter'): self.close_panel()
             return
@@ -308,8 +311,8 @@ class Hub:
 
     def refresh_resources(self):
         value=self.design_session.preview.values
-        budget=self.design_session.catalog['scenario']['budget_credits']
-        self.resources.text=(f"PREVIEW   Budget {value['cost_credits']:g}/{budget:g} cr   |   "
+        budget=self.design_session.catalog['scenario']['budget_eur']
+        self.resources.text=(f"PREVIEW   Budget {eur(value['cost_eur'])}/{eur(budget)}   |   "
                              f"Mass {value['mass_kg']:g}/{value['launch_capacity_kg']:g} kg   |   "
                              f"Power margin {value['power_margin_w']:+g} W   |   "
                              f"Data {value['delivered_mb']:.0f}/{value['expected_data_mb']:.0f} MB")

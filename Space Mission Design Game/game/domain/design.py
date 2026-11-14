@@ -3,6 +3,7 @@ from dataclasses import dataclass, replace
 from itertools import product
 import json
 from pathlib import Path
+from game.domain.economy import mission_definition, eur
 
 CATALOG_PATH = Path(__file__).resolve().parents[2] / 'content/design_catalog.json'
 
@@ -38,8 +39,11 @@ class Preview:
         return tuple(check for check in self.checks if not check.passed)
 
 
-def load_catalog(path=CATALOG_PATH):
-    return json.loads(Path(path).read_text(encoding='utf-8'))
+def load_catalog(path=CATALOG_PATH,mission_id='flood-watch'):
+    catalog=json.loads(Path(path).read_text(encoding='utf-8'))
+    mission=mission_definition(mission_id)
+    catalog['scenario'].update(budget_eur=mission['budget_eur'],currency='EUR',mission_id=mission_id)
+    return catalog
 
 
 def selected(catalog, design):
@@ -62,8 +66,8 @@ def evaluate(catalog, design):
                                              ('sensor', 'power', 'radio', 'orbit', 'launcher'))
     hardware = (sensor, power, radio)
     mass = scenario['baseline_mass_kg'] + sum(item['mass_kg'] for item in hardware)
-    cost = (scenario['baseline_cost_credits'] + sum(item['cost_credits'] for item in hardware)
-            + launcher['cost_credits'] + orbit['ground_cost_credits'])
+    cost = (scenario['baseline_cost_eur'] + sum(item['cost_eur'] for item in hardware)
+            + launcher['cost_eur'] + orbit['ground_cost_eur'])
     peak = scenario['baseline_power_w'] + sensor['power_w'] + radio['power_w']
     battery = power['battery_wh']
     min_battery = battery
@@ -99,11 +103,11 @@ def evaluate(catalog, design):
         max_storage = max(max_storage, storage)
     expected_data = sensor['data_mb_min'] * orbit['observation_min']
     values = {
-        'mass_kg': mass, 'cost_credits': cost, 'quality': sensor['quality'],
+        'mass_kg': mass, 'cost_eur': cost, 'quality': sensor['quality'],
         'peak_power_w': peak, 'generation_w': power['generation_w'],
         'power_margin_w': power['generation_w'] - peak,
         'mass_margin_kg': launcher['capacity_kg'] - mass,
-        'budget_margin_credits': scenario['budget_credits'] - cost,
+        'budget_margin_eur': scenario['budget_eur'] - cost,
         'battery_capacity_wh': power['battery_wh'], 'min_battery_wh': min_battery,
         'final_battery_wh': battery, 'unserved_energy_wh': unserved,
         'expected_data_mb': expected_data, 'generated_mb': produced,
@@ -116,8 +120,8 @@ def evaluate(catalog, design):
     checks = (
         Check('quality', 'Science quality', sensor['quality'] >= scenario['required_quality'],
               f"Science grade {sensor['quality']} / required {scenario['required_quality']}."),
-        Check('budget', 'Budget', cost <= scenario['budget_credits'],
-              f"Total {cost:g} / {scenario['budget_credits']:g} credits, including bus, launch and ground services."),
+        Check('budget', 'Budget', cost <= scenario['budget_eur'],
+              f"Total {eur(cost)} / mission budget {eur(scenario['budget_eur'])}, including bus, launch and ground services."),
         Check('mass', 'Launch mass', mass <= launcher['capacity_kg'],
               f"Spacecraft {mass:g} kg / launcher capacity {launcher['capacity_kg']:g} kg."),
         Check('orbit', 'Orbit compatibility', design.orbit in launcher['allowed_orbits'],
@@ -143,6 +147,14 @@ class DesignSession:
         self.previous = self.preview
         self.history = []
         self.message = 'Change a component to see its effects across the whole design.'
+
+    def set_mission(self,mission_id):
+        mission=mission_definition(mission_id)
+        scenario=self.catalog['scenario']
+        changed=scenario.get('mission_id')!=mission_id or scenario.get('budget_eur')!=mission['budget_eur']
+        scenario.update(mission_id=mission_id,budget_eur=mission['budget_eur'],currency='EUR')
+        if changed:self._apply(self.design,'Mission budget updated to '+eur(mission['budget_eur']))
+        return changed
 
     def choose(self, category, option):
         options = next(item['options'] for item in self.catalog['categories'] if item['id'] == category)

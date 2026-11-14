@@ -2,6 +2,7 @@
 import textwrap
 from ursina import Entity, Text, Button, color, destroy
 from game.presentation.spacecraft import Spacecraft
+from game.domain.economy import eur
 
 CYAN=color.rgb32(64,216,222)
 WHITE=color.rgb32(226,237,246)
@@ -46,11 +47,11 @@ class DesignPanel:
         self.text('Model changes with\nyour sensor, panels\nand radio.',-.175,-.015,.62,MUTED)
         self.text('Science grade '+str(values['quality']),-.175,-.10,.75,CYAN)
         base=session.catalog['scenario']
-        self.text(f"Fixed bus: {base['baseline_mass_kg']:g} kg / {base['baseline_cost_credits']:g} cr\n{base['baseline_power_w']:g} W idle / {base['storage_mb']:g} MB storage",-.175,-.145,.50,MUTED)
+        self.text(f"Fixed bus: {base['baseline_mass_kg']:g} kg / {eur(base['baseline_cost_eur'])}\n{base['baseline_power_w']:g} W idle / {base['storage_mb']:g} MB storage",-.175,-.145,.50,MUTED)
         self.text('RESOURCE BALANCE',.20,.252,.65,CYAN)
         failed={check.code for check in session.preview.failures}
         metrics=[
-            ('Budget', 'cost_credits',f"{values['cost_credits']:g}/{session.catalog['scenario']['budget_credits']:g} cr",'budget'),
+            ('Budget', 'cost_eur',f"{eur(values['cost_eur'])}/{eur(session.catalog['scenario']['budget_eur'])}",'budget'),
             ('Mass', 'mass_kg',f"{values['mass_kg']:g}/{values['launch_capacity_kg']:g} kg",'mass'),
             ('Power margin', 'power_margin_w',f"{values['power_margin_w']:+g} W",'power'),
             ('Min battery', 'min_battery_wh',f"{values['min_battery_wh']:.1f} Wh",'energy'),

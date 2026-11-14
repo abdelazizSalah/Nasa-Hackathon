@@ -1,7 +1,20 @@
 {
   "schema_version": 1,
   "missions": [
-    {"id":"flood-watch", "name":"Flood Watch", "description":"Deliver at least 60 MB of useful flood observations. Configure the existing spacecraft, manage energy and storage, and get the science to the ground.", "available":true, "configuration":"design_catalog.json"},
-    {"id":"coming-soon", "name":"Mission 02 — Coming Soon", "description":"Future mission. No configuration or simulation is available.", "available":false}
+    {
+      "id": "flood-watch",
+      "name": "Flood Watch",
+      "description": "Deliver at least 60 MB of useful flood observations. Configure the existing spacecraft, manage energy and storage, and get the science to the ground.",
+      "available": true,
+      "configuration": "design_catalog.json",
+      "currency": "EUR",
+      "budget_eur": 145000
+    },
+    {
+      "id": "coming-soon",
+      "name": "Mission 02 â€” Coming Soon",
+      "description": "Future mission. No configuration or simulation is available.",
+      "available": false
+    }
   ]
 }

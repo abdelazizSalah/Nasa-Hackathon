@@ -22,7 +22,8 @@ ROOT=Path(__file__).resolve().parents[2]
 
 def fingerprint():
     content=json.dumps(json.loads((ROOT/'content/design_catalog.json').read_text(encoding='utf-8')),sort_keys=True)
-    content+='room-workflow-v2'+(ROOT/'game/domain/assembly.py').read_text(encoding='utf-8')
+    content+=(ROOT/'game/domain/economy.py').read_text(encoding='utf-8')
+    content+='room-workflow-v3'+(ROOT/'game/domain/assembly.py').read_text(encoding='utf-8')
     content+=json.dumps(json.loads((ROOT/'content/missions.json').read_text(encoding='utf-8')),sort_keys=True)
     content+=(ROOT/'game/domain/facility_layout.py').read_text(encoding='utf-8')
     content+=''.join((ROOT/'game/domain'/name).read_text(encoding='utf-8') for name in ('design.py','campaign.py','operations.py'))
@@ -119,7 +120,7 @@ class Room:
             if 'engineer' not in self.peers:raise ValueError('Host disconnected. Wait for the host or leave the session to continue solo.')
             if action=='mission':
                 if role!='engineer':raise ValueError('Only the host selects the mission.')
-                self.assembly.select_mission(data.get('mission'));self.cards.add('purpose')
+                self.assembly.select_mission(data.get('mission'),self.session);self.cards.add('purpose')
             elif action=='confirm':
                 category=data.get('category')
                 if category not in owned(role,self.players):raise ValueError('That subsystem belongs to your teammate.')
@@ -130,16 +131,18 @@ class Room:
                 self.assembly.confirm(self.session,category,role)
             elif action=='carry':
                 self.assembly.carry(self.session,role,self.players,data.get('category'))
-            elif action=='submit':
+            elif action in ('submit','remove'):
                 category=data.get('category');p=self.players[role]
                 from game.domain.facility_layout import integration_target
                 x,z=integration_target(category)
                 if math.hypot(p['x']-x,p['z']-z)>3.2:raise ValueError('Approach the integration placement location first.')
-                self.assembly.submit(self.session,category,role,self.players)
+                if action=='remove':
+                    self.assembly.remove(self.session,category,role,self.players);self.campaign.changed()
+                else:self.assembly.submit(self.session,category,role,self.players)
             elif action=='validate':
                 if role!='engineer':raise ValueError('Only the host finalizes validation.')
                 p=self.players[role]
-                if math.hypot(p['x']-72,p['z']-6.5)>3.2:raise ValueError('Approach the integration validation console first.')
+                if min(math.hypot(p['x']-72,p['z']-6.5),math.hypot(p['x']-68,p['z']-9.8))>3.2:raise ValueError('Approach the integration validation console or red issues screen first.')
                 if self.assembly.validate(self.session,self.players):
                     while self.campaign.stage<4:
                         old=self.campaign.stage

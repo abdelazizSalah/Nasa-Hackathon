@@ -8,6 +8,7 @@ import textwrap
 from ursina import Entity,Text,Button,camera,color,destroy,scene
 from game.domain.campaign import Campaign,MISSIONS
 from game.domain.operations import simulate
+from game.domain.economy import eur
 from game.orbit.provider import trajectory
 from ursina.shaders import basic_lighting_shader
 
@@ -177,7 +178,7 @@ class MissionUI:
         self.hub.hud.enabled=True
         summary={k:v for k,v in result.items() if k!='frames'}
         values=self.hub.design_session.preview.values
-        summary.update(cost_credits=values['cost_credits'],mass_kg=values['mass_kg'],quality=values['quality'])
+        summary.update(cost_eur=values['cost_eur'],mass_kg=values['mass_kg'],quality=values['quality'])
         c=self.campaign
         network=getattr(self.hub,'network',None)
         if network is not None and network.active:
@@ -192,7 +193,7 @@ class MissionUI:
         previous=c.previous_result
         text=(f"Useful data delivered: {result['delivered_mb']:.0f} / 60 MB\n"
               f"Storage loss: {result['lost_mb']:.0f} MB\nUnserved energy: {result['unserved_wh']:.2f} Wh\n\n"
-              f"Design: {values['mass_kg']:g} kg / {values['cost_credits']:g} credits / science grade {values['quality']}\n\n"
+              f"Design: {values['mass_kg']:g} kg / {eur(values['cost_eur'])} / science grade {values['quality']}\n\n"
               + '\n'.join(textwrap.wrap(result['reason'],74))
               + (f"\n\nPrevious attempt: {previous['delivered_mb']:.0f} MB delivered." if previous else '')
               + '\n\nReport saved locally. Press M after closing to review or retry.')

@@ -7,7 +7,7 @@ import textwrap
 from ursina import Entity,Text,Button,InputField,scene,color,destroy
 from game.network.lan import Server,Client
 from game.domain.assembly import owned,assignments,ROLES
-from game.presentation.carried import set_carried
+from game.presentation.carried import set_carried, stacked_inventory
 from game.domain.design import Design
 from game.domain.navigation import Pose
 
@@ -131,8 +131,8 @@ class Crew:
             root.x+=(p['x']-root.x)*factor; root.z+=(p['z']-root.z)*factor
             root.y+=(p.get('y',0)-root.y)*factor
             root.scale_y+=((.55 if p.get('crouch') else 1)-root.scale_y)*factor
-            category=self.hub.facility.state['carried'].get(role)
-            set_carried(root,category,self.hub.design_session.design)
+            inventory=stacked_inventory(self.hub.facility.state,role)
+            set_carried(root,inventory,self.hub.design_session.design)
             root.rotation_y+=((p['yaw']-root.rotation_y+180)%360-180)*factor
             root.label.text=p['name']+'\n'+role+' / '+', '.join(assignments(self.players).get(role,[]))+'\n'+p['task']
         responsibilities=', '.join(assignments(self.players).get(self.role,[]))
@@ -144,7 +144,9 @@ class Crew:
         self.players=data.get('players',self.players)
         h.facility.receive(data['assembly'])
         design=Design(**data['design'])
-        changed=design!=s.design
+        mission=data['assembly']['mission']
+        budget_changed=s.set_mission(mission) if mission else False
+        changed=design!=s.design or budget_changed
         s.history=[s.design] if data.get('undo',{}).get(self.role) else []
         if changed:s._apply(design,'Crew selection updated by the host.'); h.spacecraft.apply(design); h.refresh_resources()
         c=h.mission.campaign; c.stage=data['stage']; c.approved=data['approved']

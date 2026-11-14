@@ -61,6 +61,7 @@ try:
     for _ in range(12):pump()
     shot('14-remote-carried-parts')
     assert all(getattr(a,'held_part',None) for a in net.avatars.values())
+    assert all(len(a.held_parts)==len(h.facility.state['inventory'][p]) for p,a in net.avatars.items())
     checks.append('three remote avatars carry actual selections; jump/crouch pose shown')
     for category in CATEGORIES:
         owner=next(p for p in net.players if category in owned(p,net.players))

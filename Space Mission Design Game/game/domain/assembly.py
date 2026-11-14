@@ -12,9 +12,7 @@ ROLES={
 CATEGORIES=tuple(c for _,categories in ROLES.values() for c in categories)
 PLAYER_IDS=('engineer','operations','crew3','crew4')
 
-def missions():
-    path=Path(__file__).resolve().parents[2]/'content/missions.json'
-    return json.loads(path.read_text(encoding='utf-8'))['missions']
+from game.domain.economy import missions, mission_definition
 
 def assignments(players):
     ordered=[p for p in PLAYER_IDS if p in players]
@@ -57,8 +55,10 @@ class Assembly:
     def __init__(self):
         self.mission=None;self.confirmed={};self.submitted={};self.approved=None;self.validation=[];self.carried={}
 
-    def select_mission(self,mission):
-        if not any(m['id']==mission and m['available'] for m in missions()):raise ValueError('That mission is unavailable.')
+    def select_mission(self,mission,session=None):
+        mission_definition(mission)
+        budget_changed=session.set_mission(mission) if session is not None else False
+        if self.mission!=mission or budget_changed:self.approved=None;self.validation=[]
         self.mission=mission
 
     def confirm(self,session,category,player):
@@ -68,6 +68,8 @@ class Assembly:
         stage=next(i for i,cs in enumerate(stages) if category in cs)
         if any(self.confirmed.get(c)!=getattr(session.design,c) for cs in stages[:stage] for c in cs):
             raise ValueError('Complete the earlier workshops first: payload, power, communications, then mission planning.')
+        if not next(c.passed for c in session.preview.checks if c.code=='budget'):
+            raise ValueError('Over mission budget. Reduce the total euro cost before collecting parts.')
         self.confirmed[category]=getattr(session.design,category)
         self.carried[player]=category
 
@@ -94,6 +96,13 @@ class Assembly:
         self.submitted[category]={'option':getattr(session.design,category),'by':player}
         self.carry(session,player,players)
 
+    def remove(self,session,category,player,players):
+        if category not in owned(player,players):raise ValueError('That contribution belongs to your teammate.')
+        if category not in self.submitted:raise ValueError('There is no submitted contribution to remove.')
+        self.submitted.pop(category)
+        self.approved=None;self.validation=[]
+        self.carried[player]=category
+
     def complete(self,session):
         return self.mission is not None and all(self.submitted.get(c,{}).get('option')==getattr(session.design,c) for c in CATEGORIES)
 
@@ -103,7 +112,7 @@ class Assembly:
         self.approved=asdict(session.design) if session.preview.passed else None
         return self.approved is not None
 
-    def ready(self,session):return self.complete(session) and self.approved==asdict(session.design)
+    def ready(self,session):return self.complete(session) and session.preview.passed and self.approved==asdict(session.design)
 
     def snapshot(self,session,players):
         for player in players:self.carry(session,player,players,self.carried.get(player))
@@ -111,7 +120,8 @@ class Assembly:
                 'approved':self.approved,'validation':self.validation,'assignments':assignments(players),
                 'carried':{p:self.carried.get(p) for p in players},
                 'inventory':{p:self.inventory(session,p,players) for p in players},
-                'ready':self.ready(session)}
+                'ready':self.ready(session),'issues':[r for r in feedback(session,players) if not r['passed']],
+                'cost_eur':session.preview.values['cost_eur'],'budget_eur':session.catalog['scenario']['budget_eur']}
 
     def restore(self,data,session):
         # Older saves require a fresh physical integration; never trust stale approval.
@@ -119,6 +129,7 @@ class Assembly:
         if not isinstance(data,dict):return
         if any(m['id']==data.get('mission') and m['available'] for m in missions()):self.mission=data['mission']
         if self.mission is None:return
+        session.set_mission(self.mission)
         confirmed=data.get('confirmed',{})
         if isinstance(confirmed,dict):
             self.confirmed={c:v for c,v in confirmed.items() if c in CATEGORIES and v==getattr(session.design,c)}

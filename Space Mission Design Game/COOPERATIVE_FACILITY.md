@@ -2,6 +2,20 @@
 
 Implemented 2026-11-14. This extends the existing Ursina game, with no new dependencies.
 
+## Latest revision: retrieval, red screen, stacks and mission EUR budgets
+
+This revision supersedes the original single-visible-item and credit-cost descriptions below. E retrieves an already placed owned component; a second E resubmits it. The host checks ownership, proximity and launch-busy state. Retrieval clears assembly and campaign approval, preserving unaffected contributions. The plan desk uses left/right and E for orbit/launcher tablets.
+
+All confirmed, unsubmitted inventory renders as a height-spaced vertical stack on local and remote carrying anchors. Stack Base in the inventory changes the lowest item. Geometry remains extracted from the existing spacecraft; planning tablets remain distinct from hardware.
+
+The large room screen shows current failed requirements and measured values in red, return stations and suggestions. Two issues display at a time, cycling every seven seconds. Total euro cost, mission budget, remaining/overspent funds and contribution counts remain visible. E at the screen opens details and permits host validation there or at the central console.
+
+Flood Watch owns a **EUR 145,000** budget in `content/missions.json`. The component catalog contains EUR prices, including bus and ground service. The old monetary numbers were scaled by 1,000; physical values and nonmonetary equations are unchanged. Catalog loading reads the mission budget, host snapshots carry canonical totals/issues and clients apply the same selected mission budget. Workstation options show individual prices and projected totals/remaining funds. Overspend may be previewed but cannot be collected, approved or launched. Retrieval keeps the selection/cost reserved until a replacement is selected. New report keys end in `_eur` instead of `_credits`; old design saves retain their component IDs and are re-evaluated on load. Existing result summaries remain readable. All clients must update together because the content fingerprint changes.
+
+**50 automated tests** passed, including euro totals, budget boundary changes, collection rejection, retrieval/invalidation, permissions, proximity and synchronization. **14 rendered revision checks** passed: five-item stack, E retrieval/resubmission, plan E controls, red engineering feedback and the exact EUR 3,000 overspend example. The existing facility (18), design (14), cached campaign and four-client graphical checks passed. Separate Wi-Fi and Arch remain manual. No library, spacecraft geometry, navigation, campaign-domain or orbit/operations files were changed by this revision. Authorized changes are monetary fields/calculation inputs, validation/carrying presentation and synchronization.
+
+Run `python scripts/verify_integration_revision.py` and `python -m unittest discover -s tests -q`. Evidence is in ignored `runtime/integration-revision/`.
+
 ## Rooms and entry
 
 Select **Flood Watch** at the mission screen beside the original Earth/orbit display. Mission 02 is disabled both in UI and domain logic. The dedicated `content/missions.json` catalog references the existing configuration rather than duplicating hardware data. Selecting the real mission records acknowledgment of its existing purpose/brief, so the educational library remains optional.
@@ -91,7 +105,7 @@ Network tests require localhost socket access; restricted agent sandboxes can de
 
 Tests are scripted Windows checks, not a claim that four physical laptops were tested. On the actual Wi-Fi, verify one host plus 1Ã¢â‚¬â€œ3 guest laptops, correct Wi-Fi IPv4 and firewall access, simultaneous walking/carrying, confirming at assigned tables after each join/leave, both traversal passages, placement visibility, failure/correction, launch and returning from results. Verify Arch native graphics and Alt key events on that laptop. No dependency changes are required, but native graphics support still depends on the OS. Live GMAT was not rerun for this enhancement; the unchanged provider and cached mission flow were regression-tested. No host migration, account-based reconnect identity, WAN hosting or encrypted transport is added. Page/mission panels remain local; snapshots synchronize engineering decisions.
 
-## Preservation and final diff audit
+## Original facility preservation audit (before the EUR revision)
 
 No unrelated game systems or other repository projects were intentionally changed. Protected files have no diff: `content/design_catalog.json`, all `game/library` and `content/library` files, `game/domain/design.py`, `campaign.py`, `operations.py`, `navigation.py`, `game/orbit`, and `game/presentation/spacecraft.py`. Original physics/specifications and mission results are preserved. Necessary shared-file edits are limited to the new world extension, approved doorway, movement layer, interaction/launch gating, dynamic roles and state synchronization. The old isolated selection entry is now a physical-workshop directory. Test harness assertions were adjusted only where those intentionally requested flows changed.
 
@@ -119,3 +133,7 @@ Paths below are repository-relative. Runtime screenshots/reports and bytecode ar
 - `Space Mission Design Game/tests/test_assembly.py`
 - `Space Mission Design Game/tests/test_four_player.py`
 - `Space Mission Design Game/tests/test_lan.py`
+
+## Revision files
+
+The latest revision changes the mission/component catalogs, assembly and design monetary handling, LAN actions/snapshots, carried views, crew/facility/design/mission/HUD presentation, test coverage and documentation. New modules: `game/domain/economy.py`, `tests/test_integration_revision.py`, `scripts/verify_integration_revision.py`. The existing design test now refers to `cost_eur`; the four-player graphical harness additionally verifies the number of visible stack items against each remote inventory. No dependencies or external assets were added.
