@@ -5,7 +5,9 @@ import queue
 import socket
 import textwrap
 from ursina import Entity,Text,Button,InputField,scene,color,destroy
-from game.network.lan import Server,Client,OWNED
+from game.network.lan import Server,Client
+from game.domain.assembly import owned,assignments,ROLES
+from game.presentation.carried import set_carried
 from game.domain.design import Design
 from game.domain.navigation import Pose
 
@@ -22,14 +24,19 @@ class Crew:
     def send(self,action,**fields):
         try:self.client.send({'action':action,**fields})
         except (OSError,ValueError) as exc:self.message='Disconnected: '+str(exc); self.hub.toast(self.message)
-    def owned(self,category):return not self.active or category in OWNED.get(self.role,set())
+    def owned(self,category):return not self.active or category in owned(self.role,self.players)
     def open(self):
         h=self.hub
         if h.modal=='flight':h.toast('Finish playback before changing crew sessions.'); return
         if h.panel is not None:h.close_panel()
-        h.panel_base('crew','PLAY TOGETHER / SAME WI-FI','Two laptops / one shared mission / N opens this panel')
+        h.panel_base('crew','PLAY TOGETHER / SAME WI-FI','One to four laptops / one shared mission / N opens this panel')
         p=h.panel
-        Text('Host: Spacecraft Engineer / sensor, power, launch hardware\nFriend: Science & Operations / orbit, radio, plan, launch\nBoth players learn, walk independently, and see each other.',parent=p,position=(-.64,.24,-.04),scale=.75)
+        roles=assignments(self.players)
+        confirmed=self.hub.facility.state['confirmed']
+        descriptions=[f'{p} / {self.players[p]["name"]}: '+', '.join(ROLES[r][0] for r in rs)
+                      +f' / {sum(c in confirmed for c in owned(p,self.players))}/{len(owned(p,self.players))} choices confirmed'
+                      for p,rs in roles.items()]
+        Text('\n'.join(descriptions) if descriptions else 'Four roles are balanced automatically across 1-4 players.\nSelect, collect, integrate and validate together. Host controls mission/approval.',parent=p,position=(-.64,.24,-.04),scale=.67)
         Text('\n'.join(textwrap.wrap(self.message,100)),parent=p,position=(-.64,.10,-.04),scale=.67,color=CYAN)
         if self.active:
             if self.server:
@@ -51,7 +58,7 @@ class Crew:
         try:
             self.server=Server(('0.0.0.0',self.port)); self.code=self.server.room.code
             self.client=Client(('127.0.0.1',self.port),self.code,name,'engineer')
-            self.message='Hosting / room '+self.code+' / waiting for your friend'; self.open()
+            self.message='Hosting / room '+self.code+' / 1-4 players; you can begin now'; self.open()
         except (OSError,ValueError) as exc:
             if self.server:self.server.stop(); self.server=None
             self.message='Could not host: '+str(exc); self.open()
@@ -70,6 +77,8 @@ class Crew:
         self.hub.design_session.history=[]
         self.revision=-1; self.seen_flight=0; self.code=''
         for avatar in self.avatars.values():destroy(avatar)
+        self.hub.facility.solo.restore(self.hub.facility.shared,self.hub.design_session)
+        self.hub.facility.shared=None;self.hub.facility.signature=None
         self.avatars={}; self.players={}; self.message='Solo / retained last shared design / N: crew'
         self.open()
     def tick(self,dt):
@@ -89,6 +98,7 @@ class Crew:
             elif kind=='state':self.apply(data)
             elif kind in ('error','notice'):
                 self.message=data.get('message','Connection error'); self.hub.toast(self.message)
+                self.hub.facility.message=self.message;self.hub.facility.refresh_modal()
                 if self.hub.modal=='mission':self.hub.mission.message=self.message; self.hub.mission.open()
             elif kind=='disconnected':
                 self.players={}; self.message='DISCONNECTED / N to leave and reconnect'; self.hub.toast(self.message)
@@ -99,16 +109,19 @@ class Crew:
                 self.message='DISCONNECTED / '+self.message+' / N to leave and reconnect'
         if self.timer>=.1 and not self.client.closed and self.role:
             self.timer=0; p=self.hub.pose
-            task={'learning':'Learning','design':'Designing','flight':'In flight','mission':'Mission control'}.get(self.hub.modal,'Exploring')
-            self.send('pose',x=p.x,z=p.z,yaw=p.yaw,task=task)
+            task={'learning':'Learning','design':'Designing','workshop':'Designing','flight':'In flight','mission':'Mission control',
+                  'validation':'Mission control','submission':'Mission control'}.get(self.hub.modal,'Exploring')
+            self.send('pose',x=p.x,z=p.z,yaw=p.yaw,task=task,y=self.hub.locomotion.y,crouch=self.hub.locomotion.crouch)
         connected=set(self.players)-{self.role}
         for role in set(self.avatars)-connected:destroy(self.avatars.pop(role))
         for role in connected:
             p=self.players[role]
             if role not in self.avatars:
                 root=Entity(parent=scene,position=(p['x'],0,p['z']))
-                tint=CYAN if role=='engineer' else color.orange
+                tint={'engineer':CYAN,'operations':color.orange,'crew3':color.violet,'crew4':color.lime}[role]
                 Entity(parent=root,model='cube',position=(0,.75,0),scale=(.5,1.2,.35),color=tint)
+                Entity(parent=root,model='cube',position=(.33,.95,.13),scale=(.18,.5,.22),color=tint)
+                Entity(parent=root,model='sphere',position=(.44,.84,.26),scale=.16,color=color.light_gray)
                 Entity(parent=root,model='sphere',position=(0,1.55,0),scale=.48,color=color.light_gray)
                 Entity(parent=root,model='cube',position=(0,1.55,.23),scale=(.32,.18,.04),color=color.azure)
                 root.label=Text('',parent=root,position=(0,2.05,0),scale=1.5,origin=(0,0),billboard=True,color=tint)
@@ -116,14 +129,20 @@ class Crew:
             root=self.avatars[role]; factor=min(1,dt*12)
             root.enabled=self.hub.modal is None
             root.x+=(p['x']-root.x)*factor; root.z+=(p['z']-root.z)*factor
+            root.y+=(p.get('y',0)-root.y)*factor
+            root.scale_y+=((.55 if p.get('crouch') else 1)-root.scale_y)*factor
+            category=self.hub.facility.state['carried'].get(role)
+            set_carried(root,category,self.hub.design_session.design)
             root.rotation_y+=((p['yaw']-root.rotation_y+180)%360-180)*factor
-            root.label.text=p['name']+'\n'+role+' / '+p['task']
-        names=', '.join(p['name'] for p in self.players.values())
-        self.status.text=self.message+' | '+names
+            root.label.text=p['name']+'\n'+role+' / '+', '.join(assignments(self.players).get(role,[]))+'\n'+p['task']
+        responsibilities=', '.join(assignments(self.players).get(self.role,[]))
+        self.status.text=self.message+f' | {len(self.players)}/4 | Your roles: '+responsibilities
     def apply(self,data):
         if data['revision']<self.revision:return
         self.revision=data['revision']; h=self.hub; s=h.design_session
         h.door_open=data['door_open']
+        self.players=data.get('players',self.players)
+        h.facility.receive(data['assembly'])
         design=Design(**data['design'])
         changed=design!=s.design
         s.history=[s.design] if data.get('undo',{}).get(self.role) else []
@@ -131,6 +150,7 @@ class Crew:
         c=h.mission.campaign; c.stage=data['stage']; c.approved=data['approved']
         c.last_result=data['last_result']; c.previous_result=data['previous_result']
         h.read_cards=set(data['cards']); h.mission.mode=data['mode']; h.mission.targeted=data['targeted']; self.busy=data['busy']
+        h.facility.refresh_modal()
         if h.modal=='design':h.design_panel.refresh()
         elif h.modal=='mission':h.mission.open()
         if data['result'] is not None and data['flight_id']>self.seen_flight:

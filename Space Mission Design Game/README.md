@@ -1,49 +1,51 @@
 # Mission Forge - playable campaign
 
-## Two-player LAN multiplayer
+## Current game: connected workshops and 1–4 player crews
 
-Use the **same updated project files** on both laptops, connect to the same Wi-Fi, and launch the game normally. No extra dependencies or internet server are needed. Press **N** while exploring to open Play Together.
+Start with the **Flood Watch** mission screen beside the Earth/orbit display in the original Spawn Room. Mission 02 is visibly disabled. The host selects the shared mission; solo players do the same. The original Library is still optional reading, with all twelve animated books preserved.
 
-1. **Host laptop:** enter your name and click **Host New Crew Mission**. This starts a fresh shared mission without overwriting your solo save. The panel shows candidate host IPv4 addresses and a six-digit room code. Share the address belonging to your Wi-Fi adapter and the code with your friend. Port is TCP **8765**.
-2. **Friend's laptop:** press N, enter a name, the host's Wi-Fi IPv4 address and room code, then click **Join Friend**. Close the panel with Escape once connected.
-3. You spawn facing each other. Your teammate appears as a named, colored astronaut. Movement and the current activity (Learning, Designing, Mission control, In flight) update across the network. Avatars do not physically block one another. Lab doors are shared, while reading panels and pauses stay local.
+Walk through the Library's new right-side doorway into **Payload Design → Power Systems → Communications → Mission Planning → Satellite Integration → Launch Readiness**. The original spawn geometry/decorations are retained; its previous design console now opens a workshop directory. The same rotating spacecraft object is displayed in Integration.
 
-| Role | Owned tasks |
+At your assigned table, press **E**, select an existing option and click **Confirm & Collect**. Complete workshops in order. Defaults also need explicit confirmation. Physical parts appear in your hand; **I** lists confirmed, unsubmitted choices and switches the visible item. Orbit and launcher use plan tablets. Other players see your carried selection. No new component specifications or engineering equations were introduced.
+
+At Integration, use E at each marked payload/power/radio location, then submit orbit and launcher at the separate mission-plan desk. The host runs validation at the central console. All five contributions are required. Failed checks show actual values/limits, contributing roles/current owners, stations and suggested revisions. Return to workshops, edit, reconfirm and resubmit affected choices. Unaffected submissions stay valid; approval is always invalidated by a design change. After approval, the flight engineer uses the Launch Readiness console for the existing cached/live GMAT mission and results.
+
+| Players | Automatic role distribution in join-slot order |
 | --- | --- |
-| Host: Spacecraft Engineer | Sensor, power package, launcher; spacecraft-design objective and readiness approval; crew save/load/new mission |
-| Friend: Science & Operations | Orbit, radio, observation plan, cached/live source; briefing and orbit/ground objectives; launch |
-| Both | Walk independently, read cards, inspect shared resource consequences, watch results |
+| 1 | All four roles |
+| 2 | Host: Science + Power; guest: Communications + Flight |
+| 3 | Host: Science + Power; guest 1: Communications; guest 2: Flight |
+| 4 | Science, Power, Communications, Flight: one role each |
 
-Both can open the design console simultaneously and edit their own subsystems. Rows belonging to the other player are marked **TEAMMATE**. The host validates every command; clients cannot bypass role permissions by sending a different UI action. Selection changes immediately affect the shared spacecraft, constraints and mission readiness. Undo reverses your most recent selection only; Reset restores only your owned categories. Crew edits invalidate readiness for both players.
+Science owns **sensor**; Power owns **power package**; Communications owns **radio**; Flight owns **orbit + launcher**, observation plan/source and launch. The host retains final validation, mission selection and shared saves. Join/leave redistributes responsibilities without discarding valid selections. A room never accepts a fifth player.
 
-### Complete a mission together
+### Actual controls
 
-- Either player opens a learning card; the friend accepts the briefing with **M -> Complete Current Task**.
-- You choose **Advanced sensor**, **Extended power**, and **Heavy launch**. Your friend chooses **Fast radio** and **Regional orbit**. You can do those subsystem tasks concurrently.
-- You complete spacecraft design; your friend completes orbit/ground; you complete readiness. The current task's owner has the enabled completion button.
-- Your friend selects **Cached** and **Targeted**, then clicks **Launch & Operate**. Both players must be connected. The host computes the result and sends the same trajectory/telemetry to both. Each may skip playback independently; edits unlock after both have finished or a disconnected player has left.
-- For a failure/repair demonstration, use **Continuous** first, inspect the storage loss, then retry with **Targeted**. Both see the same mission outcome.
+**W/S** forward/back · **A/D** strafe · **Left/Right arrows** turn · **Space** jump · **Alt** hold crouch · **E** interact · **I** parts inventory · **M** mission tablet · **N** crew · **Esc** close/pause. Mouse remains free for selection. Panels capture input; books retain their own navigation. The glowing question mark inside the Library opens current controls. The new wing includes one raised cable crossing (jump) and one low service passage (crouch); standing is blocked under its beam.
 
-Only the host needs GMAT for **Live** crew runs. Cached mode needs no GMAT installation on either guest. Physics work stays on the host; generated playback data goes to the friend. Shared saves are on the host in `runtime/crew-save.json`, separate from solo saves. Save/load includes the crew plan and source selection. Guests receive restored shared state automatically.
+### Same-Wi-Fi setup
 
-### Connection troubleshooting
+Use the **same updated checkout** on all laptops. Press **N**: the host starts a new crew mission; up to three friends join with the host's Wi-Fi IPv4 address and six-digit room code. TCP port **8765** and the existing LAN workflow are unchanged. No dependency installation is added by this enhancement. Only the host needs a configured GMAT install for Live mode; Cached needs neither GMAT nor internet.
 
-- If Windows asks about Python network access, allow it on the trusted/private network you are deliberately using. The game does not change firewall settings. A host firewall must permit incoming TCP 8765; Linux firewall configuration depends on the firewall installed there.
-- If several addresses are shown, use the host's **Wi-Fi adapter** address, not a virtual-machine/VPN adapter. On Windows, `ipconfig` shows the Wi-Fi IPv4 address; on Arch, `ip -4 addr` lists interface addresses. Some institutional Wi-Fi uses public-looking IPv4 addresses; those are accepted too.
-- Guest Wi-Fi/client isolation can block direct device communication despite using the same SSID. Use a network that permits device-to-device connections. There is no router port-forwarding requirement for this LAN mode.
-- A wrong code, occupied role, different content/model version, host shutdown, or dropped connection is reported. Press N -> Leave Session, then host/join again to reconnect. There is no automatic host migration. Leaving retains the last received mission locally as solo state; original solo save files remain untouched.
-- This is a two-player trusted-LAN prototype, not an encrypted internet multiplayer service. Do not expose the port publicly. Names and bounded JSON data are exchanged; no pickle or remote shell commands are used.
+The host owns the canonical mission/design, permissions, confirmations, inventory, submissions and approval. Complete snapshots initialize joining/reconnecting clients. Player position, vertical displacement and crouch state update remote avatars. Leaving preserves the current design locally; integration must be resubmitted for fresh solo approval. There is no automatic host migration. Reconnect through N → Leave Session → Join. Guest slots are reassigned, not authenticated accounts.
 
-### Multiplayer verification
+If Windows prompts for Python network access, allow it on the trusted/private network being used. The game does not change firewall settings. The host firewall must permit incoming TCP 8765. Pick the **Wi-Fi adapter** IPv4 (`ipconfig` on Windows, `ip -4 addr` on Linux), not VPN/VM adapters. Some institutional networks use public-looking IPv4 addresses. Client isolation on guest Wi-Fi can block laptop-to-laptop connections; no router port forwarding is required. This remains a trusted-LAN prototype, not an encrypted internet service.
 
-**28 tests passed**, including seven real TCP/localhost tests for simultaneous edits, role/input rejection, presence/disconnects, shared gates/launch/finish acknowledgements, wrong codes, door occupancy, and host-only save/load. `scripts/verify_crew.py` also renders a real networked avatar and checks the graphical shared design -> mission -> launch -> report flow with two protocol clients. No firewall changes are made by that harness; it binds loopback on an ephemeral port.
+Saves retain their existing schema and engineering data with an additive `assembly` object. Old saves load; missing/stale integration records require explicit recollection/submission and fresh approval. Mission results remain available. Crew saves remain host-only at `runtime/crew-save.json`; solo saves use `runtime/campaign.json`.
+
+### Verification and handoff
+
+See [COOPERATIVE_FACILITY.md](COOPERATIVE_FACILITY.md) for the full implementation report, file manifest, five-minute demo and manual acceptance checklist. **46 automated tests passed**, including real localhost sessions for all four player counts. Scripted graphical checks cover the single-player correction-to-launch flow, two-player launch/results, four-player carried parts/role redistribution, preserved hub/design/campaign behavior and the existing library. Separate Wi-Fi laptops and Arch graphics remain manual checks.
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -q
-.\.venv\Scripts\python.exe scripts/verify_crew.py
+.\.venv\Scripts\python.exe scripts/verify_facility.py
+.\.venv\Scripts\python.exe scripts/verify_four_player_scene.py
 ```
 
-These tests require permission to use localhost sockets; a restrictive agent sandbox can block them even though ordinary terminal execution works. Two physical laptops over Wi-Fi and Arch graphics/native libraries remain unverified. Use the procedure above for that acceptance test. The application retains the navigation bindings already present in the workspace.
+## Earlier campaign and phase reference
+
+The following sections record earlier phases. The connected-workshop flow and current controls above supersede their old isolated design-bay and two-player instructions. Simulation assumptions and numerical examples below still apply.
 
 ## Complete mission and five-minute presentation
 

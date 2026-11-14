@@ -31,7 +31,8 @@ def main():
         checks.append(name)
     hub.pose=Pose(4.2,-1.6,0)
     hub.handle_input('e')
-    check(hub.modal=='design','E opens design bay at the console')
+    check(hub.modal=='directory','E opens the new physical-workshop directory')
+    hub.close_panel();hub.open_design()
     session=hub.design_session
     check(session.preview.passed,'Default configuration passes preview')
     hub.handle_input('right arrow')
@@ -60,7 +61,7 @@ def main():
     hub.handle_input('u')
     check(session.preview==expected,'Undo can reverse reset')
     hub.handle_input('escape')
-    hub.handle_input('e')
+    hub.open_design()
     check(hub.modal=='design' and session.preview==expected,'Closing and reopening keeps session design')
     if args.failing:
         hub.design_panel.reset()

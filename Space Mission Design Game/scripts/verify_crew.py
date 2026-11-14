@@ -17,6 +17,7 @@ def shot(name):
 shot('crew-lobby.png');h.close_panel()
 server=Server(('127.0.0.1',0),'123456')
 friend=None
+friend_pose={'x':0,'z':-.8,'yaw':180}
 try:
     net=h.network;net.server=server;net.port=server.server_address[1];net.code=server.room.code
     net.client=Client(server.server_address,'123456','Host','engineer')
@@ -24,7 +25,7 @@ try:
     def pump():
         import queue
         for i in range(40):
-            if i%10==0 and not friend.closed:friend.send({'action':'pose','x':0,'z':-.8,'yaw':180,'task':'Mission control'})
+            if i%10==0 and not friend.closed:friend.send({'action':'pose',**friend_pose,'task':'Mission control'})
             h.tick(.025);app.taskMgr.step();time.sleep(.01)
             while True:
                 try:friend.events.get_nowait()
@@ -42,14 +43,31 @@ try:
     assert h.design_session.design.sensor=='advanced' and h.design_session.design.radio=='fast'
     shot('crew-design.png')
     net.send('choose',category='power',option='extended')
-    net.send('choose',category='launcher',option='heavy')
+    friend.send({'action':'choose','category':'launcher','option':'heavy'})
     wait_for(lambda:h.design_session.preview.passed)
     friend.send({'action':'read','card':'purpose'})
     wait_for(lambda:'purpose' in h.read_cards)
-    for role,stage in [('operations',1),('engineer',2),('operations',3),('engineer',4)]:
-        if role=='operations':friend.send({'action':'advance'})
-        else:h.mission.advance()
-        wait_for(lambda:h.mission.campaign.stage==stage)
+    from game.domain.assembly import CATEGORIES,owned
+    from game.domain.facility_layout import station_position,integration_target
+    from game.domain.navigation import Pose
+    net.send('mission',mission='flood-watch')
+    wait_for(lambda:h.facility.state['mission']=='flood-watch')
+    for category in CATEGORIES:
+        owner=next(p for p in net.players if category in owned(p,net.players))
+        x,z=station_position(category,owner,net.players)
+        def move(x,z):
+            if owner=='engineer':
+                h.pose=Pose(x,z,0);net.send('pose',x=x,z=z,yaw=0)
+            else:
+                friend_pose.update(x=x,z=z,yaw=0);friend.send({'action':'pose',**friend_pose})
+        def send(action):
+            if owner=='engineer':net.send(action,category=category)
+            else:friend.send({'action':action,'category':category})
+        move(x,z-1);send('confirm');wait_for(lambda:category in h.facility.state['confirmed'])
+        x,z=integration_target(category);move(x,z-1);send('submit');wait_for(lambda:category in h.facility.state['submitted'])
+    h.pose=Pose(72,6.5,0);net.send('pose',x=72,z=6.5,yaw=0);net.send('validate')
+    wait_for(lambda:h.facility.state['ready'] and h.mission.campaign.stage==4)
+    friend_pose.update(x=76,z=6.5,yaw=0);friend.send({'action':'pose',**friend_pose})
     friend.send({'action':'launch'})
     wait_for(lambda:h.mission.flight is not None)
     assert h.mission.flight['result']['passed']

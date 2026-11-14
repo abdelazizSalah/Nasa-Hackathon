@@ -58,8 +58,27 @@ class LANTests(unittest.TestCase):
     def test_shared_gates_launch_and_both_finish_acknowledgements(self):
         self.send(self.b,'read',card='purpose')
         self.state(self.a,lambda d:'purpose' in d['cards'])
-        for client,stage in ((self.b,1),(self.a,2),(self.b,3),(self.a,4)):
+        for client,stage in ((self.b,1),(self.a,2),(self.b,3)):
             self.send(client,'advance');self.state(client,lambda d:d['stage']==stage)
+        # Physical integration is now required in addition to the original campaign gates.
+        from game.domain.assembly import CATEGORIES,owned
+        from game.domain.facility_layout import station_position,integration_target
+        players=('engineer','operations')
+        self.send(self.a,'mission',mission='flood-watch')
+        for category in CATEGORIES:
+            player=next(p for p in players if category in owned(p,players))
+            client=self.a if player=='engineer' else self.b
+            x,z=station_position(category,player,players)
+            self.send(client,'pose',x=x,z=z-1,yaw=0)
+            self.send(client,'confirm',category=category)
+            self.state(client,lambda d:category in d['assembly']['confirmed'])
+            x,z=integration_target(category)
+            self.send(client,'pose',x=x,z=z-1,yaw=0)
+            self.send(client,'submit',category=category)
+            self.state(client,lambda d:category in d['assembly']['submitted'])
+        self.send(self.a,'pose',x=72,z=6.5,yaw=0)
+        self.send(self.a,'validate');self.state(self.a,lambda d:d['stage']==4)
+        self.send(self.b,'pose',x=76,z=6.5,yaw=0)
         self.send(self.b,'launch')
         data=self.state(self.a,lambda d:d['result'] is not None)
         self.assertTrue(data['result']['passed']);self.assertTrue(data['busy'])

@@ -34,24 +34,26 @@ class MissionUI:
         net=getattr(h,'network',None); crew=net is not None and net.active
         role=net.role if crew else None
         if crew:
-            Text('CREW / '+str(role)+' / '+str(len(net.players))+'/2 connected',parent=p,position=(.12,.27,-.04),scale=.6,color=CYAN)
+            Text('CREW / '+str(role)+' / '+str(len(net.players))+'/4 connected',parent=p,position=(.12,.27,-.04),scale=.6,color=CYAN)
         for i,title in enumerate(MISSIONS):
             mark='DONE' if i<stage else 'NOW' if i==stage else 'LOCKED'
             Text(f'{i+1}. {mark} / {title}',parent=p,position=(-.65,.22-i*.045,-.04),scale=.76,color=CYAN if i<=stage else color.gray)
         Text('\n'.join(textwrap.wrap(self.message,104)),parent=p,position=(-.65,-.035,-.04),scale=.72)
-        owner={0:'operations',1:'engineer',2:'operations',3:'engineer'}.get(stage)
+        owner=h.facility.stage_owner()
         Button('COMPLETE CURRENT TASK',parent=p,position=(-.34,-.16,-.04),scale=(.61,.055),text_size=.7,
                disabled=crew and (owner!=role or net.busy),on_click=self.advance)
         Button('LAUNCH & OPERATE',parent=p,position=(.34,-.16,-.04),scale=(.61,.055),text_size=.7,
-               disabled=stage<4 or self.future is not None or (crew and (role!='operations' or net.busy)),on_click=self.launch)
-        Button('SOURCE: '+self.mode.upper(),parent=p,position=(-.34,-.235,-.04),scale=(.61,.055),text_size=.7,disabled=crew and (role!='operations' or net.busy),on_click=self.toggle_source)
-        Button('PLAN: '+('TARGETED' if self.targeted else 'CONTINUOUS'),parent=p,position=(.34,-.235,-.04),scale=(.61,.055),text_size=.7,disabled=crew and (role!='operations' or net.busy),on_click=self.toggle_plan)
+               disabled=stage<4 or not h.facility.state['ready'] or self.future is not None or not h.facility.flight_owner() or (crew and net.busy),on_click=self.launch)
+        Button('SOURCE: '+self.mode.upper(),parent=p,position=(-.34,-.235,-.04),scale=(.61,.055),text_size=.7,disabled=crew and (not h.facility.flight_owner() or net.busy),on_click=self.toggle_source)
+        Button('PLAN: '+('TARGETED' if self.targeted else 'CONTINUOUS'),parent=p,position=(.34,-.235,-.04),scale=(.61,.055),text_size=.7,disabled=crew and (not h.facility.flight_owner() or net.busy),on_click=self.toggle_plan)
         for x,label,fn in [(-.48,'SAVE',self.save),(0,'LOAD',self.load),(.48,'NEW MISSION',self.reset)]:
             Button(label,parent=p,position=(x,-.31,-.04),scale=(.4,.05),text_size=.7,disabled=crew and (role!='engineer' or net.busy),on_click=fn)
         Text('Cached GMAT works offline. Live GMAT uses your local installation.\nTargeted stops imaging after 120 MB; Continuous risks storage overload.',parent=p,position=(-.65,-.355,-.04),scale=.6,color=color.light_gray)
 
     def advance(self):
         if self.crew_action('advance'):return
+        if self.campaign.stage==3 and not self.hub.facility.state['ready']:
+            self.message='Submit all contributions and validate at the integration room first.';self.open();return
         self.message=self.campaign.advance(self.hub.design_session,self.hub.read_cards); self.open()
     def toggle_source(self):
         if self.crew_action('source'):return
@@ -61,7 +63,12 @@ class MissionUI:
         self.targeted=not self.targeted; self.open()
     def save(self):
         if self.crew_action('save'):return
-        try: self.campaign.save(self.save_path,self.hub.design_session,self.hub.read_cards); self.message='Mission saved locally.'
+        try:
+            self.campaign.save(self.save_path,self.hub.design_session,self.hub.read_cards)
+            data=json.loads(self.save_path.read_text(encoding='utf-8'))
+            data['assembly']=self.hub.facility.state
+            temp=self.save_path.with_suffix('.tmp');temp.write_text(json.dumps(data,indent=2),encoding='utf-8');temp.replace(self.save_path)
+            self.message='Mission saved locally.'
         except (OSError,ValueError) as e: self.message='Save failed: '+str(e)
         self.open()
     def load(self):
@@ -69,17 +76,23 @@ class MissionUI:
         try:
             self.hub.read_cards=self.campaign.load(self.save_path,self.hub.design_session)
             self.hub.spacecraft.apply(self.hub.design_session.design); self.hub.refresh_resources()
-            self.message='Saved mission restored and readiness revalidated.'
+            self.hub.facility.solo.restore(json.loads(self.save_path.read_text(encoding='utf-8')).get('assembly'),self.hub.design_session)
+            self.campaign.changed()
+            self.message='Saved mission restored. Resubmit contributions for fresh integration approval.'
         except (OSError,ValueError,KeyError,TypeError,StopIteration) as e: self.message='Load failed: '+str(e)
         self.open()
     def reset(self):
         if self.crew_action('new'):return
+        from game.domain.assembly import Assembly
+        self.hub.facility.solo=Assembly()
         self.campaign=Campaign(); self.hub.design_session.reset(); self.hub.design_changed()
         self.message='New mission started. Learning cards remain accessible.'; self.open()
 
     def launch(self):
         if self.crew_action('launch'):return
         session=self.hub.design_session
+        if not self.hub.facility.state['ready'] or math.hypot(self.hub.pose.x-76,self.hub.pose.z-6.5)>3.2:
+            self.message='Complete integration approval and approach the launch-readiness console.';self.open();return
         if self.campaign.stage<4 or self.campaign.approved!=asdict(session.design):
             self.message='Pass readiness for this exact configuration first.'; self.open(); return
         design=session.design; targeted=self.targeted; mode=self.mode

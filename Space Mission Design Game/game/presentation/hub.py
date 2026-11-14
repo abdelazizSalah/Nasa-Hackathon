@@ -26,6 +26,8 @@ class Hub:
     def __init__(self):
         self.cards = json.loads((ROOT / 'content/learning_cards.json').read_text(encoding='utf-8'))['cards']
         self.pose = Pose()
+        from game.domain.locomotion import Locomotion
+        self.locomotion=Locomotion()
         self.pitch = 0.
         self.focused = True
         self.elapsed = 0.
@@ -49,6 +51,8 @@ class Hub:
         self._hud()
         from game.presentation.crew import Crew
         self.network=Crew(self)
+        from game.presentation.facility import Facility
+        self.facility=Facility(self)
         camera.fov = 75
         mouse.locked = False
         self._sync_camera()
@@ -73,7 +77,12 @@ class Hub:
         for x in range(-6,7,2):
             self.box((x,.008,3.5), (.025,.012,20.7), color.rgb32(37,59,76), shader=False)
         for x in (-7,7):
-            self.box((x,2,3.5), (.35,4,21), solid=True)
+            if x==7:
+                # Approved narrow Library exit; the original spawn-side wall is identical.
+                self.box((x,2,.15),(.35,4,14.3),solid=True)
+                self.box((x,2,12.35),(.35,4,3.3),solid=True)
+                self.box((x,3.7,9),(.35,.6,3.4))
+            else:self.box((x,2,3.5), (.35,4,21), solid=True)
             self.box((x * .97,.1,3.5), (.04,.045,20.5), CYAN, shader=False)
             for z in (-5,1,7,13):
                 self.box((x*.96,2,z), (.18,4,.2), color.rgb32(38,60,78))
@@ -136,7 +145,7 @@ class Hub:
         self.location = Text('MISSION CONTROL', parent=self.hud, position=(.38,.465), scale=.7, color=MUTED)
         self.task = Text('EXPLORE / Open the Learning Lab ahead', parent=self.hud, position=(-.76,.425), scale=.72)
         Entity(parent=self.hud, model='quad', y=-.445, scale=(1.6,.11), color=color.rgba32(5,13,24,235))
-        Text('ARROWS  Move     A/D  Turn     E  Interact     M  Mission     ESC  Pause', parent=self.hud,
+        Text('W/S  Walk   A/D  Strafe   Arrows  Turn   SPACE  Jump   ALT  Crouch   E  Use   I  Parts   N  Crew', parent=self.hud,
              position=(-.76,-.422), scale=.69, color=MUTED)
         self.resources=Text('',parent=self.hud,position=(-.76,-.463),scale=.58,color=CYAN)
         self.refresh_resources()
@@ -144,7 +153,7 @@ class Hub:
         self.reticle = Text('+', parent=self.hud, origin=(0,0), position=(0,0), scale=.65,color=CYAN)
 
     def _sync_camera(self):
-        camera.position=(self.pose.x,1.7,self.pose.z)
+        camera.position=(self.pose.x,self.locomotion.eye,self.pose.z)
         camera.rotation=(self.pitch,self.pose.yaw,0)
 
     def nearby(self):
@@ -172,12 +181,17 @@ class Hub:
         self.door_progress += max(-dt*1.5,min(dt*1.5,target-self.door_progress))
         self.door.x = self.door_progress*3.5
         blockers = self.obstacles + ([Obstacle(0,5,3.2,.24)] if self.door_progress<.98 else [])
-        self.pose=advance(self.pose,held_keys['w']-held_keys['s'],
+        frozen=self.modal is not None or not self.focused
+        self.locomotion.tick(dt,self.pose,self.facility.volumes,
+                             held_keys['left alt'] or held_keys['right alt'] or held_keys['alt'],frozen)
+        blockers+=self.facility.table_obstacles+self.locomotion.blockers(self.facility.volumes)
+        speed=.65 if self.locomotion.crouch else 1
+        self.pose=advance(self.pose,(held_keys['w']-held_keys['s'])*speed,
                           held_keys['right arrow']-held_keys['left arrow'],dt,blockers,
                           frozen=self.modal is not None or not self.focused,
-                          strafe=held_keys['d']-held_keys['a'])
+                          strafe=(held_keys['d']-held_keys['a'])*speed)
         self._sync_camera()
-        self.location.text = 'LEARNING LAB' if self.pose.z>5.3 else 'MISSION CONTROL'
+        self.location.text = 'ENGINEERING WING' if self.pose.x>7 else 'LEARNING LAB' if self.pose.z>5.3 else 'MISSION CONTROL'
         if self.design_session.history:
             passed=sum(check.passed for check in self.design_session.preview.checks)
             self.task.text=f'DESIGN / {passed}/8 preview checks pass  |  Learn in the Lab or revise in the bay'
@@ -193,7 +207,9 @@ class Hub:
             self.prompt.text=self.notice
         else:
             self.prompt.text={'door': 'E / Close Lab door' if self.door_open else 'E / Open Learning Lab',
-                              'library':'E / Explore the ten learning cards','design':'E / Configure spacecraft'}.get(self.nearby(),'Learning Lab ahead / Spacecraft design bay on the right')
+                              'library':'E / Open aerospace books','design':'E / Engineering workshop directory'}.get(self.nearby(),'Learning Lab ahead / Spacecraft design bay on the right')
+
+        self.facility.tick(dt)
 
     def toast(self,text):
         self.notice=text
@@ -217,9 +233,14 @@ class Hub:
         if self.modal:
             if key in ('escape','enter'): self.close_panel()
             return
-        if key=='escape':
+        if key=='space':
+            if self.focused:self.locomotion.jump()
+        elif key=='i':self.facility.open_inventory()
+        elif key=='escape':
             self.open_pause()
         elif key=='e':
+            facility_target=self.facility.nearby()
+            if facility_target:self.facility.interact(facility_target);return
             target=self.nearby()
             if target=='door':
                 if self.network.active:
@@ -230,7 +251,7 @@ class Hub:
                 self.door_open=not self.door_open
                 self.events.append('door_opened' if self.door_open else 'door_closed')
             elif target=='library': self.open_library()
-            elif target=='design': self.open_design()
+            elif target=='design': self.facility.open_directory()
 
     def panel_base(self,kind,title,subtitle):
         self.modal=kind
@@ -267,7 +288,7 @@ class Hub:
 
     def open_pause(self):
         self.panel_base('pause','MISSION PAUSED','Explore the hub at your own pace.')
-        Text('UP / DOWN    Walk forward and backward\nLEFT / RIGHT  Step sideways\nA / D          Turn left and right\nE              Open a nearby door or console\nESC            Close reading panels / pause\n\nThe mouse stays free for interface controls.',parent=self.panel,
+        Text('W / S          Walk forward and backward\nA / D          Step sideways\nLEFT / RIGHT   Turn left and right\nSPACE          Jump / ALT: Crouch\nE              Open a nearby door or console\nESC            Close reading panels / pause\n\nThe mouse stays free for interface controls.',parent=self.panel,
              position=(-.61,.20,-.04),scale=.95,color=WHITE)
         Button('RESUME / ENTER',parent=self.panel,position=(-.33,-.27,-.04),scale=(.55,.07),color=color.rgb32(26,96,110),text_size=.85,on_click=self.close_panel)
         Button('EXIT GAME',parent=self.panel,position=(.33,-.27,-.04),scale=(.55,.07),color=color.rgb32(52,61,76),text_size=.85,on_click=application.quit)
@@ -279,6 +300,7 @@ class Hub:
         self.events.append('design_opened')
 
     def design_changed(self):
+        if hasattr(self,'facility'):self.facility.changed()
         self.mission.campaign.changed()
         self.spacecraft.apply(self.design_session.design)
         self.refresh_resources()
