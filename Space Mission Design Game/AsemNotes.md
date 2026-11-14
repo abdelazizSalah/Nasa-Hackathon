@@ -69,3 +69,67 @@ mission design.
     - ENSURE COMPATIBLE WITH THE ORBIT
 
 
+### Orbits
+- affects coverage,
+- observation opportunities,
+- communications,
+- mission lifetime,
+#### examples
+- Low Earth Orbit (LEO) (2000km)
+- Medium Earth Orbits (2000-36000km)
+- Geostationary Earth Orbit (36000km)
+- Lunar Orbit (Around the moon)
+    - Final Lunar Orbit
+    - lunar orbit
+    - capture orbit
+
+
+### Components and Variables
+A general attribute for all is price. For each submodule, there exist many
+models from different vendors. Each has a different price and spec.  
+Realistic Values source???????
+- Spacecraft (Rocket)
+    - Payload capacity
+        - Volume
+        - Mass. Do we need it?
+    - Cost of construction
+    - Cost of launch
+    - Time to build
+    - Total Mass
+    - Fuel
+        - Type
+        - Amount
+        - Mass
+        - Volume
+    - Submodules
+        - Computing Module
+            - Energy Consumption
+        - Propulsion system
+- Payload
+    - Description: the purpose of the instrument
+        - Example: Rover, Satellite, telescope, etc.
+    - Time to build
+    - Mass
+    - Volume
+    - Operational Power requirement
+    - Submodules
+        - Sensors
+            - main instrument
+                - This is the part that is responsible for generating data and
+                how the visualization of it depends on.
+        - Actuators
+        - Computing Module
+            - Energy Consumption
+        - Communication module
+            - Range
+            - Power consumption
+            - Data rate
+        - Power Source
+            - Battery Module
+                - Capacity
+                - Volume
+                - Mass
+            - Solar panels
+                - Capacity
+                - Volume
+                - Mass
