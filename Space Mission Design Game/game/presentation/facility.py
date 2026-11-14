@@ -333,11 +333,11 @@ class Facility:
         self.btn('MISSION CONTROL',.34,-.29,.60,self.hub.mission.open,not state['ready'])
 
     def open_help(self):
-        self.panel('controls','FLIGHT DECK CONTROLS','Keyboard navigation / mouse stays free for books and consoles')
-        lines=['[ W / S ]  Walk forward / backward','[ A / D ]  Strafe left / right','[ LEFT / RIGHT ARROWS ]  Turn camera left / right',
+        self.panel('controls','FLIGHT DECK CONTROLS','Mouse look while exploring / free cursor in books and consoles')
+        lines=['[ W / S ]  Walk forward / backward','[ A / D ]  Strafe left / right','[ MOUSE ]  Look up / down / left / right (arrows also turn)',
                '[ SPACE ]  Jump (grounded only)','[ LEFT / RIGHT ALT ]  Hold to crouch','[ E ]  Use a nearby door, station or placement location',
                '[ I ]  Inventory / E places or removes a marked contribution','[ LEFT MOUSE ]  Select covers and interface buttons',
-               '[ M ]  Mission tablet    [ N ]  LAN crew','[ ESC ]  Close menu / book / pause; mouse remains free']
+               '[ M ]  Mission tablet    [ N ]  LAN crew','[ ESC ]  Close menu / book / pause; resume mouse look']
         for i,line in enumerate(lines):self.txt(line,-.63,.23-i*.05,.76,CYAN if i in (3,4) else color.white)
 
     def open_inventory(self):

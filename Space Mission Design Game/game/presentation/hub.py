@@ -10,6 +10,7 @@ from ursina import (Entity, Text, Button, DirectionalLight, AmbientLight, camera
                     color, held_keys, mouse, application, scene, destroy)
 from ursina.shaders import basic_lighting_shader, unlit_shader
 from game.domain.navigation import Pose, Obstacle, advance
+from game.domain.look import mouse_look
 from game.domain.design import DesignSession
 from game.domain.economy import eur
 from game.presentation.spacecraft import Spacecraft
@@ -30,6 +31,7 @@ class Hub:
         from game.domain.locomotion import Locomotion
         self.locomotion=Locomotion()
         self.pitch = 0.
+        self._look_ready=False
         self.focused = True
         self.elapsed = 0.
         self.frames = 0
@@ -55,7 +57,7 @@ class Hub:
         from game.presentation.facility import Facility
         self.facility=Facility(self)
         camera.fov = 75
-        mouse.locked = False
+        mouse.locked = True
         self._sync_camera()
 
     def box(self, position, scale, tint=color.rgb32(38,55,72), solid=False, shader=True, **kwargs):
@@ -146,7 +148,7 @@ class Hub:
         self.location = Text('MISSION CONTROL', parent=self.hud, position=(.38,.465), scale=.7, color=MUTED)
         self.task = Text('EXPLORE / Open the Learning Lab ahead', parent=self.hud, position=(-.76,.425), scale=.72)
         Entity(parent=self.hud, model='quad', y=-.445, scale=(1.6,.11), color=color.rgba32(5,13,24,235))
-        Text('W/S  Walk   A/D  Strafe   Arrows  Turn   SPACE  Jump   ALT  Crouch   E  Use   I  Parts   N  Crew', parent=self.hud,
+        Text('W/S  Walk   A/D  Strafe   Mouse  Look   SPACE  Jump   ALT  Crouch   E  Use   I  Parts   N  Crew', parent=self.hud,
              position=(-.76,-.422), scale=.69, color=MUTED)
         self.resources=Text('',parent=self.hud,position=(-.76,-.463),scale=.58,color=CYAN)
         self.refresh_resources()
@@ -156,6 +158,21 @@ class Hub:
     def _sync_camera(self):
         camera.position=(self.pose.x,self.locomotion.eye,self.pose.z)
         camera.rotation=(self.pitch,self.pose.yaw,0)
+
+    def _update_mouse_look(self):
+        if self.modal is not None or not self.focused:
+            if mouse.locked:mouse.locked=False
+            self._look_ready=False
+            return
+        if not mouse.locked:
+            mouse.locked=True
+            self._look_ready=False
+            return
+        if not self._look_ready:
+            # Ignore recentering/old cursor motion when returning from UI or Alt-Tab.
+            self._look_ready=True
+            return
+        self.pose,self.pitch=mouse_look(self.pose,self.pitch,mouse.velocity.x,mouse.velocity.y)
 
     def nearby(self):
         candidates = [('door',(0,0,5)),*self.targets]
@@ -183,6 +200,7 @@ class Hub:
         self.door.x = self.door_progress*3.5
         blockers = self.obstacles + ([Obstacle(0,5,3.2,.24)] if self.door_progress<.98 else [])
         frozen=self.modal is not None or not self.focused
+        self._update_mouse_look()
         self.locomotion.tick(dt,self.pose,self.facility.volumes,
                              held_keys['left alt'] or held_keys['right alt'] or held_keys['alt'],frozen)
         blockers+=self.facility.table_obstacles+self.locomotion.blockers(self.facility.volumes)
@@ -259,6 +277,7 @@ class Hub:
     def panel_base(self,kind,title,subtitle):
         self.modal=kind
         mouse.locked=False
+        self._look_ready=False
         self.panel=Entity(parent=camera.ui)
         self.panel_dim=Entity(parent=self.panel, model='quad', scale=(4,3), z=.1, color=color.rgba32(2,7,14,215), collider='box')
         self.panel_background=Entity(parent=self.panel, model='quad', scale=(1.46,.82), color=NAVY)
@@ -291,7 +310,7 @@ class Hub:
 
     def open_pause(self):
         self.panel_base('pause','MISSION PAUSED','Explore the hub at your own pace.')
-        Text('W / S          Walk forward and backward\nA / D          Step sideways\nLEFT / RIGHT   Turn left and right\nSPACE          Jump / ALT: Crouch\nE              Open a nearby door or console\nESC            Close reading panels / pause\n\nThe mouse stays free for interface controls.',parent=self.panel,
+        Text('W / S          Walk forward and backward\nA / D          Step sideways\nMOUSE          Look in every direction\nLEFT / RIGHT   Optional keyboard turning\nSPACE          Jump / ALT: Crouch\nE              Open a nearby door or console\nESC            Close reading panels / pause\n\nThe mouse is free in menus; close this panel to look around.',parent=self.panel,
              position=(-.61,.20,-.04),scale=.95,color=WHITE)
         Button('RESUME / ENTER',parent=self.panel,position=(-.33,-.27,-.04),scale=(.55,.07),color=color.rgb32(26,96,110),text_size=.85,on_click=self.close_panel)
         Button('EXIT GAME',parent=self.panel,position=(.33,-.27,-.04),scale=(.55,.07),color=color.rgb32(52,61,76),text_size=.85,on_click=application.quit)
@@ -327,7 +346,8 @@ class Hub:
         self.panel=None
         self.modal=None
         self.design_panel=None
-        mouse.locked=False
+        mouse.locked=bool(self.focused)
+        self._look_ready=False
 
     def evidence(self):
         from dataclasses import asdict

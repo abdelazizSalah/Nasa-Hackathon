@@ -1,5 +1,11 @@
 # Mission Forge - playable campaign
 
+## Mouse look
+
+Move the mouse to look up/down/left/right while exploring. The cursor is captured for continuous turning; pitch stops before the view flips upside down. W/S walk, A/D strafe and left/right arrows remain optional keyboard turning. Escape opens pause and releases the cursor. Books, consoles and menus also release it automatically; closing them resumes mouse look. Focus loss releases capture, and returning skips recenter motion. This supersedes older statements that the mouse never turns the camera.
+
+Verified with two unit tests and `python scripts/verify_mouse_look.py` (both axes, camera sync, reading/menu capture, focus loss and safe restoration).
+
 ## Latest update: retrieval, red diagnostics, stacked parts and euro budgets
 
 At a marked integration location, **E toggles placement/retrieval** of your own component. Retrieval returns it to your carried stack, preserves other contributions and invalidates approval. At the mission-plan desk, **left/right** selects orbit/launcher and **E** submits or retrieves that tablet. All confirmed, unsubmitted choices are now displayed in a vertical stack locally and on remote astronauts. **I > Stack Base** changes the lowest item.

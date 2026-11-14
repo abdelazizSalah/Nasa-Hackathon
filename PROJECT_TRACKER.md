@@ -10,6 +10,8 @@ LATEST VERIFICATION: 46 automated tests passed, including real TCP sessions, ful
 
 LATEST REVISION (2026-11-14): E retrieves/resubmits owned integration parts and plan tablets, restoring inventory and clearing approval. All carried items stack vertically, including remote views. A large red integration screen shows actual failed checks, return stations and budget overruns. Flood Watch owns EUR 145,000 in content/missions.json; catalog/report monetary fields now use EUR, scaled from old teaching costs by 1,000. Option prices/projected totals/remaining funds are visible, and overspend blocks collection, approval and launch. 50 automated tests and 14 new rendered revision checks pass, alongside facility/design/campaign and four-client graphical regressions. See README and COOPERATIVE_FACILITY.md. Physical Wi-Fi and Arch remain manual. No Library, physical component specifications, spacecraft geometry or orbit/operations changes. Budget numbers are fictional educational costs.
 
+LATEST CONTROLS UPDATE: Mouse displacement now controls yaw and pitch during exploration; vertical look is clamped to +/-85 degrees. Existing W/S walking, A/D strafing and optional arrow turning remain. Books/menus release capture and freeze look; closing resumes capture with stale/recenter motion suppressed. Alt-Tab also releases safely. Two unit tests and the scripted graphical mouse-look harness pass; run scripts/verify_mouse_look.py. No mission/engineering/network changes in this update.
+
 ## Read first
 
 - Scope: only the Space Mission Design Game project. Earth_Detective is separate; do not modify it as part of this plan.
