@@ -2,6 +2,8 @@
 
 Updated: 2026-11-14. Remaining single-player gameplay is implemented and Windows-verified. Phases 4-6 have working campaign, live/cached GMAT, launch and results. Phase 7 Windows verification/documentation is done; Arch and second-machine clean-install validation remain pending external access.
 
+CURRENT EXTENSION: User requested two-player same-Wi-Fi play with visible avatars and different tasks. Implemented N-key host/join lobby, room code, TCP 8765, named role avatars, independent movement/panels, shared door, authoritative host mission state, role-specific component editing/objectives, shared launch/results, and host crew saves. See `Space Mission Design Game/MULTIPLAYER_VERIFICATION.md` and README. Verified 28 tests and real-socket graphical crew flow on one Windows laptop. Physical two-laptop Wi-Fi and Arch acceptance remain pending; do not claim them tested. No firewall/security settings were changed, and no new dependencies are required.
+
 LATEST AUTHORIZATION: User said "finish all the remaining phases, only contact me when you need permissions". This supersedes every older instruction in this tracker to pause for phase approvals. Continue fixes autonomously; ask only for genuinely necessary permissions. Do not mark Arch validation passed without evidence.
 
 ## Read first
@@ -16,7 +18,7 @@ LATEST AUTHORIZATION: User said "finish all the remaining phases, only contact m
 
 A simple, visually impressive, single-player 3D mission-design game built in Python/Ursina for a five-minute hackathon presentation. The player uses arrows to move and turn with the camera; E opens doors/consoles; a Learning Lab displays short concept cards. One flood-monitoring satellite scenario progresses through five missions: briefing, spacecraft configuration, orbit/communications, launch review, operations/science delivery.
 
-Trade-offs are the central mechanic: every major selection changes related mass, power, budget, data, communications, or coverage values. Multiple designs can succeed. Launch visuals cannot substitute for scientific success. A real GMAT adapter is required; a labeled simplified provider and matching cached GMAT data are fallback/demo paths, not proof of integration. Multiplayer is deferred.
+Trade-offs are the central mechanic: every major selection changes related mass, power, budget, data, communications, or coverage values. Multiple designs can succeed. Launch visuals cannot substitute for scientific success. A real GMAT adapter is required; a labeled simplified provider and matching cached GMAT data are fallback/demo paths, not proof of integration. Two-player LAN mode is now implemented; broader multiplayer remains future scope.
 
 ## Review and approval workflow
 

@@ -10,10 +10,11 @@ AMBER=color.rgb32(255,190,89)
 
 
 class DesignPanel:
-    def __init__(self, parent, session, on_change):
+    def __init__(self, parent, session, on_change, network=None):
         self.root=Entity(parent=parent)
         self.session=session
         self.on_change=on_change
+        self.network=network
         self.row=0
         self.body=None
         self.model=Spacecraft(self.root,position=(-.06,.13,-.12),scale=.125)
@@ -32,11 +33,13 @@ class DesignPanel:
         values=session.preview.values
         for i,category in enumerate(session.catalog['categories']):
             y=.245-i*.091
-            self.text(('> ' if self.row==i else '  ')+category['label'].upper(),-.675,y,.63,AMBER if self.row==i else MUTED)
+            locked=self.network is not None and not self.network.owned(category['id'])
+            self.text(('> ' if self.row==i else '  ')+category['label'].upper()+(' / TEAMMATE' if locked else ''),-.675,y,.60,AMBER if self.row==i else MUTED)
             for j,option in enumerate(category['options']):
                 chosen=getattr(session.design,category['id'])==option['id']
                 Button(option['label'],parent=self.body,position=(-.586+j*.186,y-.038,-.04),scale=(.174,.042),
                        text_size=.68,color=color.rgb32(28,103,118) if chosen else color.rgb32(28,46,64),
+                       disabled=self.network is not None and (not self.network.owned(category['id']) or self.network.busy),
                        on_click=lambda c=category['id'],o=option['id'],r=i:self.choose(c,o,r))
         self.model.apply(session.design)
         self.text('SPACECRAFT',-.175,.252,.63,CYAN)
@@ -78,15 +81,22 @@ class DesignPanel:
 
     def choose(self,category,option,row):
         self.row=row
+        if self.network is not None:
+            if not self.network.owned(category) or self.network.busy:
+                self.session.message='That row belongs to your teammate, or the crew launch is in progress.'
+                self.refresh();return
+            self.network.send('choose',category=category,option=option); return
         if self.session.choose(category,option):
             self.on_change()
         self.refresh()
 
     def undo(self):
+        if self.network is not None:self.network.send('undo'); return
         if self.session.undo(): self.on_change()
         self.refresh()
 
     def reset(self):
+        if self.network is not None:self.network.send('reset_design'); return
         if self.session.reset(): self.on_change()
         self.refresh()
 

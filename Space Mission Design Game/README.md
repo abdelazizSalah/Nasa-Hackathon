@@ -1,5 +1,50 @@
 # Mission Forge - playable campaign
 
+## Two-player LAN multiplayer
+
+Use the **same updated project files** on both laptops, connect to the same Wi-Fi, and launch the game normally. No extra dependencies or internet server are needed. Press **N** while exploring to open Play Together.
+
+1. **Host laptop:** enter your name and click **Host New Crew Mission**. This starts a fresh shared mission without overwriting your solo save. The panel shows candidate host IPv4 addresses and a six-digit room code. Share the address belonging to your Wi-Fi adapter and the code with your friend. Port is TCP **8765**.
+2. **Friend's laptop:** press N, enter a name, the host's Wi-Fi IPv4 address and room code, then click **Join Friend**. Close the panel with Escape once connected.
+3. You spawn facing each other. Your teammate appears as a named, colored astronaut. Movement and the current activity (Learning, Designing, Mission control, In flight) update across the network. Avatars do not physically block one another. Lab doors are shared, while reading panels and pauses stay local.
+
+| Role | Owned tasks |
+| --- | --- |
+| Host: Spacecraft Engineer | Sensor, power package, launcher; spacecraft-design objective and readiness approval; crew save/load/new mission |
+| Friend: Science & Operations | Orbit, radio, observation plan, cached/live source; briefing and orbit/ground objectives; launch |
+| Both | Walk independently, read cards, inspect shared resource consequences, watch results |
+
+Both can open the design console simultaneously and edit their own subsystems. Rows belonging to the other player are marked **TEAMMATE**. The host validates every command; clients cannot bypass role permissions by sending a different UI action. Selection changes immediately affect the shared spacecraft, constraints and mission readiness. Undo reverses your most recent selection only; Reset restores only your owned categories. Crew edits invalidate readiness for both players.
+
+### Complete a mission together
+
+- Either player opens a learning card; the friend accepts the briefing with **M -> Complete Current Task**.
+- You choose **Advanced sensor**, **Extended power**, and **Heavy launch**. Your friend chooses **Fast radio** and **Regional orbit**. You can do those subsystem tasks concurrently.
+- You complete spacecraft design; your friend completes orbit/ground; you complete readiness. The current task's owner has the enabled completion button.
+- Your friend selects **Cached** and **Targeted**, then clicks **Launch & Operate**. Both players must be connected. The host computes the result and sends the same trajectory/telemetry to both. Each may skip playback independently; edits unlock after both have finished or a disconnected player has left.
+- For a failure/repair demonstration, use **Continuous** first, inspect the storage loss, then retry with **Targeted**. Both see the same mission outcome.
+
+Only the host needs GMAT for **Live** crew runs. Cached mode needs no GMAT installation on either guest. Physics work stays on the host; generated playback data goes to the friend. Shared saves are on the host in `runtime/crew-save.json`, separate from solo saves. Save/load includes the crew plan and source selection. Guests receive restored shared state automatically.
+
+### Connection troubleshooting
+
+- If Windows asks about Python network access, allow it on the trusted/private network you are deliberately using. The game does not change firewall settings. A host firewall must permit incoming TCP 8765; Linux firewall configuration depends on the firewall installed there.
+- If several addresses are shown, use the host's **Wi-Fi adapter** address, not a virtual-machine/VPN adapter. On Windows, `ipconfig` shows the Wi-Fi IPv4 address; on Arch, `ip -4 addr` lists interface addresses. Some institutional Wi-Fi uses public-looking IPv4 addresses; those are accepted too.
+- Guest Wi-Fi/client isolation can block direct device communication despite using the same SSID. Use a network that permits device-to-device connections. There is no router port-forwarding requirement for this LAN mode.
+- A wrong code, occupied role, different content/model version, host shutdown, or dropped connection is reported. Press N -> Leave Session, then host/join again to reconnect. There is no automatic host migration. Leaving retains the last received mission locally as solo state; original solo save files remain untouched.
+- This is a two-player trusted-LAN prototype, not an encrypted internet multiplayer service. Do not expose the port publicly. Names and bounded JSON data are exchanged; no pickle or remote shell commands are used.
+
+### Multiplayer verification
+
+**28 tests passed**, including seven real TCP/localhost tests for simultaneous edits, role/input rejection, presence/disconnects, shared gates/launch/finish acknowledgements, wrong codes, door occupancy, and host-only save/load. `scripts/verify_crew.py` also renders a real networked avatar and checks the graphical shared design -> mission -> launch -> report flow with two protocol clients. No firewall changes are made by that harness; it binds loopback on an ephemeral port.
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -q
+.\.venv\Scripts\python.exe scripts/verify_crew.py
+```
+
+These tests require permission to use localhost sockets; a restrictive agent sandbox can block them even though ordinary terminal execution works. Two physical laptops over Wi-Fi and Arch graphics/native libraries remain unverified. Use the procedure above for that acceptance test. The application retains the navigation bindings already present in the workspace.
+
 ## Complete mission and five-minute presentation
 
 Press **M** during exploration to open Mission Control. The five objectives unlock consecutively. Open a Lab card first, then use Complete Current Task to accept the brief. Build a feasible spacecraft, validate its orbit/ground configuration, and pass integrated readiness. Launch & Operate becomes available only for that exact approved configuration. Any component change invalidates readiness and returns you to design review.

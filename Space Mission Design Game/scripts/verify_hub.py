@@ -29,12 +29,16 @@ def main():
     def walk(direction,frames):
         held_keys['up arrow']=int(direction>0)
         held_keys['down arrow']=int(direction<0)
+        # Support both navigation layouts used by this project without changing user bindings.
+        held_keys['w']=int(direction>0)
+        held_keys['s']=int(direction<0)
         for _ in range(frames): hub.tick(.05)
         held_keys['up arrow']=0
         held_keys['down arrow']=0
+        held_keys['w']=held_keys['s']=0
 
     walk(1,110)
-    check(4.4<hub.pose.z<4.61,'Closed door blocks walking')
+    check(4.4<hub.pose.z<4.61,f'Closed door blocks walking (pose={hub.pose}, modal={hub.modal})')
     hub.handle_input('e')
     for _ in range(16): hub.tick(.05)
     check(hub.door_open and hub.door_progress>.98,'E opens sliding Lab door')

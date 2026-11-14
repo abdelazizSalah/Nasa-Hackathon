@@ -49,6 +49,9 @@ def main():
     sys.modules['__main__'].update=update
     sys.modules['__main__'].input=experience.handle_input
     def finish():
+        if hasattr(experience,'network'):
+            if experience.network.client:experience.network.client.close()
+            if experience.network.server:experience.network.server.stop()
         if state['frames']<2: return
         gsg=app.win.get_gsg()
         evidence_path.write_text(json.dumps({

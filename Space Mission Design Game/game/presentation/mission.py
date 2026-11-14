@@ -15,6 +15,11 @@ ROOT=Path(__file__).resolve().parents[2]
 CYAN=color.rgb32(64,216,222); AMBER=color.rgb32(255,190,89)
 
 class MissionUI:
+    def crew_action(self,action):
+        network=getattr(self.hub,'network',None)
+        if network is not None and network.active:
+            network.send(action); return True
+        return False
     def __init__(self,hub):
         self.hub=hub; self.campaign=Campaign(); self.pool=ThreadPoolExecutor(max_workers=1)
         self.future=None; self.mode='cached'; self.targeted=True; self.flight=None
@@ -26,28 +31,41 @@ class MissionUI:
         if h.panel is not None: h.close_panel()
         h.panel_base('mission','MISSION CONTROL','Flood Watch / consecutive objectives / M opens this tablet')
         p=h.panel; stage=self.campaign.stage
+        net=getattr(h,'network',None); crew=net is not None and net.active
+        role=net.role if crew else None
+        if crew:
+            Text('CREW / '+str(role)+' / '+str(len(net.players))+'/2 connected',parent=p,position=(.12,.27,-.04),scale=.6,color=CYAN)
         for i,title in enumerate(MISSIONS):
             mark='DONE' if i<stage else 'NOW' if i==stage else 'LOCKED'
             Text(f'{i+1}. {mark} / {title}',parent=p,position=(-.65,.22-i*.045,-.04),scale=.76,color=CYAN if i<=stage else color.gray)
         Text('\n'.join(textwrap.wrap(self.message,104)),parent=p,position=(-.65,-.035,-.04),scale=.72)
-        Button('COMPLETE CURRENT TASK',parent=p,position=(-.34,-.16,-.04),scale=(.61,.055),text_size=.7,on_click=self.advance)
+        owner={0:'operations',1:'engineer',2:'operations',3:'engineer'}.get(stage)
+        Button('COMPLETE CURRENT TASK',parent=p,position=(-.34,-.16,-.04),scale=(.61,.055),text_size=.7,
+               disabled=crew and (owner!=role or net.busy),on_click=self.advance)
         Button('LAUNCH & OPERATE',parent=p,position=(.34,-.16,-.04),scale=(.61,.055),text_size=.7,
-               disabled=stage<4 or self.future is not None,on_click=self.launch)
-        Button('SOURCE: '+self.mode.upper(),parent=p,position=(-.34,-.235,-.04),scale=(.61,.055),text_size=.7,on_click=self.toggle_source)
-        Button('PLAN: '+('TARGETED' if self.targeted else 'CONTINUOUS'),parent=p,position=(.34,-.235,-.04),scale=(.61,.055),text_size=.7,on_click=self.toggle_plan)
+               disabled=stage<4 or self.future is not None or (crew and (role!='operations' or net.busy)),on_click=self.launch)
+        Button('SOURCE: '+self.mode.upper(),parent=p,position=(-.34,-.235,-.04),scale=(.61,.055),text_size=.7,disabled=crew and (role!='operations' or net.busy),on_click=self.toggle_source)
+        Button('PLAN: '+('TARGETED' if self.targeted else 'CONTINUOUS'),parent=p,position=(.34,-.235,-.04),scale=(.61,.055),text_size=.7,disabled=crew and (role!='operations' or net.busy),on_click=self.toggle_plan)
         for x,label,fn in [(-.48,'SAVE',self.save),(0,'LOAD',self.load),(.48,'NEW MISSION',self.reset)]:
-            Button(label,parent=p,position=(x,-.31,-.04),scale=(.4,.05),text_size=.7,on_click=fn)
+            Button(label,parent=p,position=(x,-.31,-.04),scale=(.4,.05),text_size=.7,disabled=crew and (role!='engineer' or net.busy),on_click=fn)
         Text('Cached GMAT works offline. Live GMAT uses your local installation.\nTargeted stops imaging after 120 MB; Continuous risks storage overload.',parent=p,position=(-.65,-.355,-.04),scale=.6,color=color.light_gray)
 
     def advance(self):
+        if self.crew_action('advance'):return
         self.message=self.campaign.advance(self.hub.design_session,self.hub.read_cards); self.open()
-    def toggle_source(self): self.mode='live' if self.mode=='cached' else 'cached'; self.open()
-    def toggle_plan(self): self.targeted=not self.targeted; self.open()
+    def toggle_source(self):
+        if self.crew_action('source'):return
+        self.mode='live' if self.mode=='cached' else 'cached'; self.open()
+    def toggle_plan(self):
+        if self.crew_action('plan'):return
+        self.targeted=not self.targeted; self.open()
     def save(self):
+        if self.crew_action('save'):return
         try: self.campaign.save(self.save_path,self.hub.design_session,self.hub.read_cards); self.message='Mission saved locally.'
         except (OSError,ValueError) as e: self.message='Save failed: '+str(e)
         self.open()
     def load(self):
+        if self.crew_action('load'):return
         try:
             self.hub.read_cards=self.campaign.load(self.save_path,self.hub.design_session)
             self.hub.spacecraft.apply(self.hub.design_session.design); self.hub.refresh_resources()
@@ -55,10 +73,12 @@ class MissionUI:
         except (OSError,ValueError,KeyError,TypeError,StopIteration) as e: self.message='Load failed: '+str(e)
         self.open()
     def reset(self):
+        if self.crew_action('new'):return
         self.campaign=Campaign(); self.hub.design_session.reset(); self.hub.design_changed()
         self.message='New mission started. Learning cards remain accessible.'; self.open()
 
     def launch(self):
+        if self.crew_action('launch'):return
         session=self.hub.design_session
         if self.campaign.stage<4 or self.campaign.approved!=asdict(session.design):
             self.message='Pass readiness for this exact configuration first.'; self.open(); return
@@ -145,8 +165,13 @@ class MissionUI:
         summary={k:v for k,v in result.items() if k!='frames'}
         values=self.hub.design_session.preview.values
         summary.update(cost_credits=values['cost_credits'],mass_kg=values['mass_kg'],quality=values['quality'])
-        c=self.campaign; c.previous_result=c.last_result; c.last_result=summary
-        if result['passed']: c.stage=5
+        c=self.campaign
+        network=getattr(self.hub,'network',None)
+        if network is not None and network.active:
+            network.send('finished',flight_id=network.seen_flight)
+        else:
+            c.previous_result=c.last_result; c.last_result=summary
+            if result['passed']: c.stage=5
         (ROOT/'runtime/mission-report.json').write_text(json.dumps(summary,indent=2))
         h=self.hub
         if h.panel: h.close_panel()

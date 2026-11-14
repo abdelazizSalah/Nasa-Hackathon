@@ -47,6 +47,8 @@ class Hub:
         self.mission=MissionUI(self)
         self._world()
         self._hud()
+        from game.presentation.crew import Crew
+        self.network=Crew(self)
         camera.fov = 75
         mouse.locked = False
         self._sync_camera()
@@ -165,6 +167,7 @@ class Hub:
         return min(result)[1] if result else None
 
     def tick(self, dt):
+        self.network.tick(dt)
         self.mission.tick(dt)
         if self.mission.flight is not None: return
         self.elapsed += dt
@@ -205,6 +208,8 @@ class Hub:
         self.notice_until=self.elapsed+3
 
     def handle_input(self,key):
+        if key=='n' and self.modal is None:
+            self.network.open(); return
         if self.modal=='flight':
             if key in ('escape','enter'): self.mission.finish_flight()
             return
@@ -229,6 +234,8 @@ class Hub:
         elif key=='e':
             target=self.nearby()
             if target=='door':
+                if self.network.active:
+                    self.network.send('door'); return
                 if self.door_open and abs(self.pose.z-5)<1 and abs(self.pose.x)<2:
                     self.toast('Step clear of the doorway before closing it.')
                     return
@@ -264,6 +271,7 @@ class Hub:
         self.card_index=index
         card=self.cards[index]
         self.read_cards.add(card['id'])
+        if self.network.active:self.network.send('read',card=card['id'])
         self.events.append('card:'+card['id'])
         for i,button in enumerate(self.card_buttons):
             button.color=color.rgb32(29,100,116) if i==index else color.rgb32(23,43,62)
@@ -298,7 +306,8 @@ class Hub:
 
     def open_design(self):
         self.panel_base('design','SPACECRAFT DESIGN','Flood Watch / trade study / all numbers are teaching assumptions')
-        self.design_panel=DesignPanel(self.panel,self.design_session,self.design_changed)
+        self.design_panel=DesignPanel(self.panel,self.design_session,self.design_changed,
+                                      self.network if self.network.active else None)
         self.events.append('design_opened')
 
     def design_changed(self):
