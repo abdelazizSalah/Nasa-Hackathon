@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "assumptions": "Invented educational values, not NASA hardware specifications. One-minute resource preview, preset orbit opportunities, full initial battery. Power margin uses a conservative simultaneous-load design rule. No real trajectory/coverage/lifetime validation yet.",
+  "scenario": {
+    "name": "Flood Watch", "budget_credits": 145, "required_quality": 1,
+    "service_months": 12, "baseline_mass_kg": 30, "baseline_cost_credits": 20,
+    "baseline_power_w": 12, "storage_mb": 800,
+    "baseline_description": "Structure, computer, attitude control and storage are included in the fixed bus. Ground-service cost covers the selected 12-month teaching scenario."
+  },
+  "defaults": {"sensor": "basic", "power": "compact", "radio": "standard", "orbit": "regional", "launcher": "light"},
+  "categories": [
+    {"id": "sensor", "label": "Sensor", "options": [
+      {"id": "basic", "label": "Basic", "name": "Basic imager", "mass_kg": 10, "cost_credits": 15, "power_w": 20, "data_mb_min": 30, "quality": 1, "description": "Standard detail with lower power demand and data production."},
+      {"id": "advanced", "label": "Advanced", "name": "Advanced imager", "mass_kg": 18, "cost_credits": 30, "power_w": 40, "data_mb_min": 60, "quality": 2, "description": "More detail, but twice the data rate and higher mass, power and cost."}
+    ]},
+    {"id": "power", "label": "Power package", "options": [
+      {"id": "compact", "label": "Compact", "name": "Compact power", "mass_kg": 12, "cost_credits": 18, "generation_w": 55, "battery_wh": 9, "description": "Light solar panels and a small battery leave less reserve."},
+      {"id": "extended", "label": "Extended", "name": "Extended power", "mass_kg": 22, "cost_credits": 30, "generation_w": 120, "battery_wh": 24, "description": "Larger panels and battery improve power and endurance, but add mass and cost."}
+    ]},
+    {"id": "radio", "label": "Communications", "options": [
+      {"id": "standard", "label": "Standard", "name": "Standard radio", "mass_kg": 5, "cost_credits": 10, "power_w": 15, "downlink_mb_min": 80, "description": "A light radio saves power and money, but transfers less data per contact."},
+      {"id": "fast", "label": "Fast", "name": "Fast radio", "mass_kg": 9, "cost_credits": 20, "power_w": 25, "downlink_mb_min": 200, "description": "More data can reach Earth during contact, at a higher power, mass and cost."}
+    ]},
+    {"id": "orbit", "label": "Orbit preset", "options": [
+      {"id": "regional", "label": "Regional", "name": "Regional orbit preset", "period_min": 90, "sunlight_min": 60, "observation_min": 10, "contact_min": 6, "ground_cost_credits": 8, "description": "This teaching preset offers ten observing minutes and six contact minutes per cycle."},
+      {"id": "wide", "label": "Wide", "name": "Wide orbit preset", "period_min": 100, "sunlight_min": 55, "observation_min": 12, "contact_min": 4, "ground_cost_credits": 18, "description": "More observing time, but longer eclipse, shorter contact and higher ground-service cost."}
+    ]},
+    {"id": "launcher", "label": "Launch option", "options": [
+      {"id": "light", "label": "Light", "name": "Light launch", "capacity_kg": 70, "cost_credits": 18, "allowed_orbits": ["regional"], "description": "A lower-cost launch supports up to 70 kg to the regional preset only."},
+      {"id": "heavy", "label": "Heavy", "name": "Heavy launch", "capacity_kg": 100, "cost_credits": 30, "allowed_orbits": ["regional", "wide"], "description": "A higher-cost launch supports both presets and more spacecraft mass."}
+    ]}
+  ]
+}

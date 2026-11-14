@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "cards": [
+    {
+      "id": "purpose", "title": "Mission purpose", "category": "01 / START WITH WHY",
+      "summary": "Start with a useful outcome. The spacecraft is a means to answer a question or serve people.",
+      "example": "Our scenario asks for flood observations that reach emergency responders while they are still useful.",
+      "impact": "A sharp image delivered too late may not satisfy the mission. Design for the people using the data.",
+      "source_label": "NASA: Design and Develop Science Missions, slides 10-15",
+      "source_url": "https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf"
+    },
+    {
+      "id": "requirements", "title": "Science requirements", "category": "02 / MAKE SUCCESS MEASURABLE",
+      "summary": "Turn the goal into checks: what to observe, how well, how often, and when the result must arrive.",
+      "example": "A teaching scenario could require six useful observations before a delivery deadline. These targets are game assumptions.",
+      "impact": "Requiring finer detail can demand a different instrument and a larger resource budget.",
+      "source_label": "NASA: Design and Develop Science Missions, slides 18-19",
+      "source_url": "https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf"
+    },
+    {
+      "id": "payload", "title": "Spacecraft & instruments", "category": "03 / SCIENCE NEEDS SUPPORT",
+      "summary": "The instrument makes the measurement. The spacecraft supplies power, pointing, computing, storage, and communications.",
+      "example": "A new imaging sensor still needs a stable pointing system and somewhere to store its observations.",
+      "impact": "Adding a capable sensor can increase science value, mass, cost, power demand, and data production together.",
+      "source_label": "NASA: science mission segments and design",
+      "source_url": "https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf"
+    },
+    {
+      "id": "mass", "title": "Mass & launch capacity", "category": "04 / EVERY KILOGRAM COUNTS",
+      "summary": "Include the whole spacecraft in its mass budget. A launcher must carry that mass to the chosen destination orbit.",
+      "example": "In a game example, 110 kg of hardware cannot use a launch option rated for 100 kg to that orbit.",
+      "impact": "A larger battery may solve an energy problem but require a heavier, more costly launch option.",
+      "source_label": "NASA: mission design and launch segment",
+      "source_url": "https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf"
+    },
+    {
+      "id": "power", "title": "Power versus energy", "category": "05 / WATTS ARE NOT WATT-HOURS",
+      "summary": "Power (W) is the rate of energy use. Battery energy (Wh) determines how long a load can run without generation.",
+      "example": "A 20 W load uses 10 Wh in half an hour. This simple example ignores real battery losses and reserves.",
+      "impact": "Solar panels need sunlight. During eclipse, a larger battery helps endurance but adds mass and cost.",
+      "source_label": "NASA SmallSat Institute: Power",
+      "source_url": "https://www.nasa.gov/smallsat-institute/sst-soa/power-subsystems/"
+    },
+    {
+      "id": "orbit", "title": "Orbit & coverage", "category": "06 / WHERE YOU FLY MATTERS",
+      "summary": "Altitude and inclination influence what a satellite can see and when it returns. Earth rotates beneath its orbit.",
+      "example": "An orbit that never passes near the target region cannot satisfy that region's observation goal.",
+      "impact": "Changing the orbit also changes observation timing, eclipses, ground contacts, and launch compatibility.",
+      "source_label": "NASA Earth Observatory: Catalog of Earth Satellite Orbits",
+      "source_url": "https://science.nasa.gov/earth/earth-observatory/catalog-of-earth-satellite-orbits/"
+    },
+    {
+      "id": "communications", "title": "Communications & data", "category": "07 / COLLECTION IS NOT DELIVERY",
+      "summary": "Observations first occupy onboard storage. A downlink transfers them during usable ground-station contacts.",
+      "example": "In a simplified example, 2 MB/s for a 60-second contact transfers up to 120 MB before overheads.",
+      "impact": "More sensor data can overflow storage. A faster radio can help but also consumes power and budget.",
+      "source_label": "NASA SmallSat Institute: Communications",
+      "source_url": "https://www.nasa.gov/smallsat-institute/sst-soa/soa-communications/"
+    },
+    {
+      "id": "budget", "title": "Budget & lifetime", "category": "08 / PLAN BEYOND THE HARDWARE",
+      "summary": "A mission must support development, launch, and operations. A longer service period needs resources beyond the initial build.",
+      "example": "A teaching budget includes ground-station access and mission operations as well as the satellite and launch.",
+      "impact": "A cheaper component may free budget elsewhere. Cost alone does not determine whether the mission succeeds.",
+      "source_label": "NASA: overall mission concept and implementation",
+      "source_url": "https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf"
+    },
+    {
+      "id": "segments", "title": "Four mission segments", "category": "09 / THE WHOLE SYSTEM",
+      "summary": "Launch gets hardware to space; the space segment measures; the ground segment receives; users turn results into knowledge or action.",
+      "example": "Our rocket, satellite, ground station, and flood-response team form one connected mission.",
+      "impact": "Improving only the satellite cannot fix an unavailable ground station or a missed user deadline.",
+      "source_label": "NASA: Design and Develop Science Missions, slide 8",
+      "source_url": "https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf"
+    },
+    {
+      "id": "verification", "title": "Verification & trade-offs", "category": "10 / TEST THE DESIGN",
+      "summary": "Decide how each requirement will be checked before building. Compare alternatives, then investigate why a check fails.",
+      "example": "Check payload mass against launch capacity and compare power demand with generation and stored energy.",
+      "impact": "Fixing one constraint may worsen another. Recheck the complete design after a change.",
+      "source_label": "NASA: Design and Develop Science Missions, slide 19",
+      "source_url": "https://www.nasa.gov/wp-content/uploads/2025/04/250323-design-and-develop-science-mission.pdf"
+    }
+  ]
+}

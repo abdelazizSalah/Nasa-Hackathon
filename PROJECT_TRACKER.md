@@ -1,6 +1,6 @@
 # Mission Forge - project tracker and handoff
 
-Updated: 2026-11-14. Current checkpoint: design proposal complete; awaiting user review before Phase 1. No game implementation or dependency installation has started.
+Updated: 2026-11-14. Current checkpoint: Phase 3 implemented and Windows-verified; awaiting user manual review. User approved Phase 3 after reviewing Phase 2. Phase 4 is not authorized. Arch Linux tests remain pending.
 
 ## Read first
 
@@ -26,10 +26,10 @@ Record statuses distinctly: proposed, approved, in progress, implemented, manual
 
 | Phase | Deliverable | Current status | Acceptance evidence |
 | --- | --- | --- | --- |
-| Planning | Revised design source, PDF, tracker | Ready for review | Sources checked; PDF rendered/inspected before delivery |
-| 1 | Setup scripts, engine window, standalone GMAT proof | Proposed; not authorized yet | None |
-| 2 | 3D hub, arrows/camera, Lab door and cards | Proposed | None |
-| 3 | Configuration and visible trade-off engine | Proposed | None |
+| Planning | Revised design source, PDF, tracker | Accepted for implementation | User: "Nice, lets start phase 1" on 2026-11-14 |
+| 1 | Setup scripts, engine window, standalone GMAT proof | Accepted for continuation | User: "Very good, lets go to phase 2 :)"; Windows evidence retained; Arch pending |
+| 2 | 3D hub, arrows/camera, Lab door and cards | Accepted for continuation | User: "Very cool, now lets go to phase 3"; Windows evidence retained; Arch pending |
+| 3 | Configuration and visible trade-off engine | Implemented; user review pending | 17 unit tests, 14 design and 11 hub graphical integration checks; desktop trade-off chain inspected |
 | 4 | Five consecutive missions, readiness, saves | Proposed | None |
 | 5 | GMAT bridge and orbital/resource operations | Proposed | None |
 | 6 | Launch gallery, spectators, feedback and report | Proposed | None |
@@ -40,23 +40,83 @@ Record statuses distinctly: proposed, approved, in progress, implemented, manual
 - Reviewed the existing six-page proposal, supplied challenge notes/resources, and NASA mission-design guide.
 - Checked official Ursina installation/package metadata: propose Python 3.12 and stable Ursina 8.3.0, with actual version pinning/verification in Phase 1.
 - Identified GSC-19468-1 as GMAT and confirmed official distribution notes describe Windows and Linux console applications.
-- Designed a separate file/process GMAT bridge and early compatibility proof. No live GMAT run has been performed.
+- Designed a separate file/process GMAT bridge and completed the early standalone compatibility proof. The in-game bridge remains Phase 5.
 - Created the phased design and this handoff tracker. Final artifact verification belongs to the planning checkpoint, not game acceptance.
 
 ## Environment and unknowns
 
-- Planning performed on Windows. Active `python` reports 3.10.14. Another compatible interpreter may exist; locate or install Python 3.12 for the game in Phase 1.
-- User supplied GMAT R2026a folder: `C:\Users\20115\Dropbox\My PC (LAPTOP-ILAL93NC)\Downloads\gmat-win-R2026a`. Read-only inspection confirmed bin/GmatConsole.exe, README.txt, docs, data, and samples. This is local machine context, not a portable default or a value to hardcode in game code. Execution/version remains to be verified.
+- Planning performed on Windows. Default `python` reports 3.10.14 and `py` selects 2.7. Found a separate user installation at `%LOCALAPPDATA%\Programs\Python\Python313\python.exe` (3.13.0); used it to create the project `.venv`. Python 3.12+ is the supported setup target. Do not replace the user's default interpreter.
+- User supplied GMAT R2026a folder: `C:\Users\20115\Dropbox\My PC (LAPTOP-ILAL93NC)\Downloads\gmat-win-R2026a`. Verified actual console execution and distribution README version. Local path is configured in ignored `Space Mission Design Game/local_config.json`, not hardcoded into code or portable defaults.
 - Colleague uses Arch Linux. User prefers avoiding unnecessary OS-specific work; use one Python implementation and bootstrap, with only necessary native/graphics checks. A Windows GMAT binary will not serve as the Linux backend.
 - NASA catalog page refers to R2025a; current project documentation also has R2026a. Target the supplied R2026a installation, not an automatic upgrade. Match scripts and console invocation to the installed distribution.
-- Ursina/graphics compatibility, Linux setup, GMAT execution, trajectory import, and numerical game balance are unverified.
+- Windows Ursina/graphics and standalone GMAT execution are verified. Phase 3's teaching model is balanced and conserves energy/data across all 32 configurations. Arch setup, live Linux GMAT, real orbital geometry, and in-game trajectory import remain unverified.
 - The PDF was authored with existing document tooling. Those dependencies do not imply that game dependencies are installed.
 - Planning artifact check: PDF has 8 pages and 6 clickable references; rendered pages were visually checked, with no table overflow or clipped text found. Read-only checks did not launch GMAT or install game packages.
 
-## Phase 1 next actions, once approved
+## Phase 1 evidence (2026-11-14)
 
-1. Inspect supplied GMAT R2026a folder and bundled docs/samples; verify execution. Check Arch Linux native compatibility with colleague when available.
-2. Locate a Python 3.12 interpreter; establish game source layout without touching Earth_Detective.
+- User approval: "Nice, lets start phase 1". Implemented only Phase 1.
+- Added isolated bootstrap, pinned dependencies, read-only doctor with optional execution checks, 3D renderer scene, GMAT script/template/validator, tests, local config example, and project README.
+- Installed game dependencies into `Space Mission Design Game/.venv`; no system Python or GMAT installation modified. Pip download needed network access beyond the restricted sandbox and then succeeded.
+- Windows environment: Python 3.13.0, Ursina 8.3.0, Panda3D 1.10.16, Intel UHD Graphics. Initial timed run rendered 399 frames in about 5 seconds. Visual review corrected Ursina color units and adjusted camera framing/lighting. Final scene was visually inspected; Escape exited successfully.
+- GMAT: three successful live R2026a console runs, each producing 11 finite state samples over about 600 seconds. Checked elapsed time, A1 epoch consistency, expected Earth-orbit radius/speed, and actual position change. Frame EarthMJ2000Eq, positions km, velocities km/s. Final combined doctor check exited 0; final timed scene rendered 319 frames in 5.000 seconds. Not a full mission-feasibility or game-integration proof.
+- GMAT needs installed data access outside the restricted agent sandbox: inside it, initialization reported existing directories missing. The same script succeeded with normal installed-data access while all outputs stayed in project runtime folders.
+- Generated startup copies redirect output/log/update paths into the project and disable unused external Python/MATLAB/Fmincon interfaces. Original startup remains unchanged.
+- Checks: 4 unit tests pass; `pip check` passes; bootstrap rerun succeeds without changing installed versions; scripts compile.
+- Evidence files: ignored runtime/graphics-smoke.json, runtime/gmat-latest.json, per-run GMAT trajectory/script/startup/console/metadata. See `Space Mission Design Game/PHASE1_VERIFICATION.md` for a portable summary.
+- Manual results: agent visual inspection and Escape verified on Windows. User acceptance pending. Arch tests not run; colleague must supply results. No claim of Linux acceptance.
+
+## Phase 2 evidence (2026-11-14)
+
+- User approval: "Very good, lets go to phase 2 :)". This authorizes Phase 2, not Phase 3.
+- Default `main.py` now opens the compact 3D hub. Original Phase 1 rendering remains available with `--engine-check`; doctor graphics smoke continues using that original scene.
+- Implemented arrow-key walking and turning, attached fixed-height camera, delta-time motion, floor-plan collision/sliding, focus-loss key clearing, cyan route markers, hologram, design-bay placeholder, sliding Lab door, and doorway-close protection.
+- Added ten offline JSON learning cards with summaries, examples, trade-offs, and optional primary NASA source links. Keyboard and mouse selection work. Card counts track opened cards, not learning mastery. No mission-completion claim yet.
+- Reading and pause freeze both position and heading. Escape closes panels or opens pause; Enter resumes. Exit Game works. Mouse stays released, with no head-bob or required mouse-look.
+- Architecture: `game/domain/navigation.py` is renderer-independent; `game/presentation/hub.py` builds the world/panels; `engine_check.py` retains the separate proof. No dependencies added.
+- Verification: 9 unit tests pass (4 existing GMAT-proof checks, 5 navigation behaviors); 11 explicit graphical integration checks pass. The harness exercises actual hub movement inputs, door state, Lab entry, all cards, reading freeze, resumed walking, pause/resume, and doorway safety. Output: ignored `runtime/hub-verification.json`.
+- Desktop inspection verified initial hub, card layout, Down-arrow selection, mouse selection of a different card, Escape close, room materials, pause controls, and clicked Exit Game (process exit 0). The initial dark material/overlay-depth issues were corrected before final review. Optional source-browser launch was not exercised.
+- Original engine scene still renders and exits after the requested timed run. Compile and pip dependency checks pass. No new GMAT run needed because the backend did not change.
+- User manual acceptance and Arch graphics/navigation remain pending. No Phase 3 simulation/trade-off engine, campaign, saves, in-game GMAT bridge, or launch gallery has been implemented.
+- See `Space Mission Design Game/PHASE2_VERIFICATION.md` and the updated project README for exact manual checks.
+
+## Phase 3 evidence (2026-11-14)
+
+- User approval: "Very cool, now lets go to phase 3". Phase 4 is not authorized.
+- Added `content/design_catalog.json` with five binary choices (sensor, power, communications, orbit, launcher), fixed bus, scenario limits, and explicit invented teaching assumptions.
+- Added renderer-independent `game/domain/design.py`: deterministic one-minute cycle preview, mass/cost sums, eight checks, previous-selection comparisons, session undo and reversible reset. Evaluated all 32 combinations: seven feasible, including basic and advanced sensor designs.
+- Added a live design panel and procedural spacecraft shared between panel/world. Sensor, solar arrays and radio geometry reflect choices; a resource summary stays in the HUD. The design bay is now functional, and changes persist when closing/reopening it within the session.
+- Demonstrated chain: default 57 kg / 89 credits passes; Advanced -> power/data failures; Extended -> mass/data failures; Heavy -> data failure; Fast -> all checks pass at 79 kg / 138 credits / 600 MB delivered. Wide orbit on that advanced design exposes a 148/145 credit budget failure.
+- Preview checks: science grade, budget, launch mass, launcher/orbit compatibility, conservative peak-power rule, cycle energy, storage overflow, and cycle data delivery. Regional/Wide observation/contact/eclipse opportunities are curated, not GMAT-derived. Service duration is fixed at 12 months for cost assumptions, not years of reliability prediction.
+- Tests: 17 unit tests pass; energy and data balances checked over all 32 combinations; 14 graphical design integration checks and the existing 11 hub checks pass. Compile and pip checks pass. No dependencies added; no change to the GMAT backend requiring a repeat proof.
+- Desktop review: mouse clicks followed the power -> mass -> data -> success sequence; inspected 3D changes, deltas, deficits and viable state. Keyboard Backspace reset and mouse Undo were checked; scripted U/row input is covered by the harness. User comfort/independent manual acceptance remains pending.
+- Current generated evidence: ignored runtime/design-verification.json and runtime/hub-verification.json. The former records a valid advanced design after the non-review test run. Full commands, expected values, and limitations are in `Space Mission Design Game/PHASE3_VERIFICATION.md` and README.
+- No disk saves, five-mission progression, launch clearance, GMAT-backed coverage/contact geometry, launch cinematic, or multiplayer is claimed. These remain future phases.
+
+## What the user should test now
+
+From `Space Mission Design Game` in PowerShell:
+
+```powershell
+.\.venv\Scripts\python.exe main.py
+```
+
+Restart any older build, approach the design bay on the right, and press E. From Reset, select Advanced sensor -> Extended power -> Heavy launch -> Fast radio. Expect the limiting factor to shift from power to mass to data, then a passing preview. Try Wide orbit to reveal the budget limit, then Undo. Test keyboard row/option selection, reset, undo, model changes, and closing/reopening the panel. Existing Lab/pause/navigation should still work. No new install is needed on this Windows setup; Arch instructions remain in README.
+
+## Next actions
+
+Latest navigation preference: A/D now turn left/right; arrows retain forward/backward and strafing. Mouse-look and pointer capture are removed. The HUD, pause instructions, and room sign reflect these controls. Reading/pause/design panels and loss of window focus still freeze navigation. This supersedes the mouse-look adjustment below; Phase 4 remains unauthorized.
+
+Navigation adjustment requested after Phase 3: Left/Right now strafe, and captured mouse movement controls yaw/pitch. Panels and pause release the pointer; closing them restores capture. Focus loss freezes movement/releases capture. Diagonal speed is normalized, and lateral motion uses existing wall collision. This supersedes earlier arrow-turning descriptions. Phase 4 remains unauthorized. Automated navigation and hub checks passed; mouse sensitivity/comfort still needs user review.
+
+1. Await user review and resolve any Phase 3 issues.
+2. Record colleague's Arch graphics and GMAT evidence when available; until then leave those checks pending.
+3. Ask for explicit approval before Phase 4 (five consecutive missions, readiness review, local saves and revalidation after changes).
+
+## Original Phase 1 checklist (completed on Windows)
+
+1. Inspect supplied GMAT R2026a folder and bundled docs/samples; verify execution. Arch native compatibility remains pending colleague test.
+2. Locate a Python 3.12+ interpreter; establish game source layout without touching Earth_Detective.
 3. Add pinned requirements and a stdlib-based cross-platform bootstrap plus doctor commands; no silent admin/system installation.
 4. Open a minimal Ursina scene and record graphics/runtime results.
 5. Run one GMAT sample and inspect time-stamped position output with frame, time scale, and units recorded.
