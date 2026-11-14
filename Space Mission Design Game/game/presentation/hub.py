@@ -177,10 +177,10 @@ class Hub:
         self.door_progress += max(-dt*1.5,min(dt*1.5,target-self.door_progress))
         self.door.x = self.door_progress*3.5
         blockers = self.obstacles + ([Obstacle(0,5,3.2,.24)] if self.door_progress<.98 else [])
-        self.pose=advance(self.pose,held_keys['up arrow']-held_keys['down arrow'],
-                          held_keys['d']-held_keys['a'],dt,blockers,
+        self.pose=advance(self.pose,held_keys['w']-held_keys['s'],
+                          held_keys['right arrow']-held_keys['left arrow'],dt,blockers,
                           frozen=self.modal is not None or not self.focused,
-                          strafe=held_keys['right arrow']-held_keys['left arrow'])
+                          strafe=held_keys['d']-held_keys['a'])
         self._sync_camera()
         self.location.text = 'LEARNING LAB' if self.pose.z>5.3 else 'MISSION CONTROL'
         if self.design_session.history:
