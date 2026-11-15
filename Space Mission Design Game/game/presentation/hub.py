@@ -8,11 +8,14 @@ import webbrowser
 
 from ursina import (Entity, Text, Button, DirectionalLight, AmbientLight, camera,
                     color, held_keys, mouse, application, scene, destroy)
-from ursina.shaders import basic_lighting_shader, unlit_shader
+from ursina.shaders import unlit_shader
 from ursina.prefabs.slider import Slider
 from game.domain.navigation import Pose, Obstacle, advance
 from game.domain.look import mouse_look
 from game.presentation.responsive import ResponsivePanel
+from game.presentation.materials import surface
+from game.presentation.material_lighting import material_shader
+from game.presentation.planet import earth
 from game.domain.design import DesignSession
 from game.domain.economy import eur
 from game.presentation.spacecraft import Spacecraft
@@ -73,8 +76,12 @@ class Hub:
         self.facility.open_help(welcome=True)
 
     def box(self, position, scale, tint=color.rgb32(38,55,72), solid=False, shader=True, **kwargs):
+        if shader and 'texture' not in kwargs:
+            material='deck-plate' if position[1]<0 and scale[1]<.5 else 'wall-panels' if scale[1]>2 and max(scale[0],scale[2])>2 else 'equipment-panel'
+            kwargs['texture']=surface(material)
         entity = Entity(model='cube', position=position, scale=scale, color=tint,
-                        shader=basic_lighting_shader if shader else unlit_shader, **kwargs)
+                        shader=material_shader if shader else unlit_shader, **kwargs)
+        if shader and min(scale)>.05:entity.texture_scale=(max(1,max(scale[0],scale[2])/2),max(1,scale[1]/2))
         if solid:
             self.obstacles.append(Obstacle(position[0], position[2], scale[0], scale[2]))
         return entity
@@ -124,8 +131,7 @@ class Hub:
         # Hub's hologram and base; the walkway stays clear.
         self.box((-3.8,.4,.2), (2.5,.8,2.5), solid=True)
         self.box((-3.8,.82,.2), (2.4,.04,2.4), CYAN, shader=False)
-        self.earth = Entity(model='sphere', position=(-3.8,2,.2), scale=1.9,
-                            color=color.rgb32(26,133,184), shader=basic_lighting_shader)
+        self.earth = earth(position=(-3.8,2,.2), scale=1.9)
         for i in range(72):
             a = i * math.tau/72
             Entity(model='sphere', position=(-3.8+1.5*math.cos(a),2+.25*math.sin(a),.2+1.5*math.sin(a)), scale=.025,color=CYAN)
@@ -205,6 +211,7 @@ class Hub:
         self.elapsed += dt
         self.frames += 1
         self.earth.rotation_y += dt*8
+        self.earth.clouds.rotation_y += dt*1.2
         self.spacecraft.root.rotation_y += dt*8
         if self.modal=='design' and self.design_panel is not None:
             self.design_panel.model.root.rotation_y += dt*12

@@ -13,6 +13,8 @@ from game.domain.operations import simulate
 from game.domain.economy import eur
 from game.orbit.provider import trajectory
 from ursina.shaders import basic_lighting_shader
+from game.presentation.materials import surface
+from game.presentation.planet import earth
 
 ROOT=Path(__file__).resolve().parents[2]
 CYAN=color.rgb32(64,216,222); AMBER=color.rgb32(255,190,89)
@@ -178,12 +180,12 @@ class MissionUI:
         h.panel_base('flight','LAUNCH & OPERATIONS','A short cinematic, then trajectory-driven telemetry. Skip goes to the calculated result.')
         self.flight={'result':result,'elapsed':0}
         self.world=Entity(parent=scene)
-        self.rocket=Entity(parent=self.world,model='cube',position=(100,0,0),scale=(.4,2,.4),color=color.white)
+        self.rocket=Entity(parent=self.world,model='cube',position=(100,0,0),scale=(.4,2,.4),color=color.white,texture=surface('ceramic-tiles'),shader=basic_lighting_shader)
         Entity(parent=self.rocket,model='sphere',y=.6,scale=(1,.35,1),color=color.red)
         for side in (-1,1): Entity(parent=self.rocket,model='cube',position=(side*.7,-.35,0),scale=(.7,.25,.2),color=color.red)
         Entity(parent=self.rocket,model='sphere',y=-.65,scale=(.6,.7,.6),color=AMBER)
-        self.earth=Entity(parent=self.world,model='sphere',position=(100,2,0),scale=4,color=color.azure,shader=basic_lighting_shader,enabled=False)
-        self.sat=Entity(parent=self.world,model='cube',scale=.15,color=AMBER,enabled=False)
+        self.earth=earth(parent=self.world,position=(100,2,0),scale=4,enabled=False)
+        self.sat=Entity(parent=self.world,model='cube',scale=.15,color=color.white,texture=surface('thermal-foil'),enabled=False)
         self.station=Entity(parent=self.world,model='sphere',scale=.08,color=CYAN,enabled=False)
         self.beam=Entity(parent=self.world,model='cube',color=CYAN,enabled=False)
         self.orbit_dots=[]

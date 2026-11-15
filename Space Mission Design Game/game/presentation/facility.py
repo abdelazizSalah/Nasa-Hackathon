@@ -6,6 +6,7 @@ import textwrap
 from ursina import Entity, Text, Button, color, destroy, camera, scene
 from game.presentation.spacecraft import Spacecraft
 from game.presentation.materials import surface
+from game.presentation.material_lighting import material_shader
 from game.presentation.room_style import THEMES,decorate,texture_spacecraft
 from game.domain.guidance import next_step,progress_text,NAMES
 from game.library.content import ReferenceOpener
@@ -66,7 +67,7 @@ class Facility:
         for title,x,categories in (*ROOMS,('Satellite Integration',72,())):
             theme_key=categories[0] if categories else 'integration'
             theme=THEMES[theme_key];accent=color.rgb32(*theme[1])
-            floor=h.box((x,-.15,9),(14,.3,10),color.rgb32(62,76,89),texture=surface('brushed-metal'))
+            floor=h.box((x,-.15,9),(14,.3,10),color.rgb32(108,125,140),texture=surface('deck-plate'))
             floor.texture_scale=(7,5)
             for z in (4,14):h.box((x,2,z),(14,4,.25),solid=True)
             for boundary in (x-7,):
@@ -166,10 +167,10 @@ class Facility:
             name=self.players.get(player,{}).get('name','Waiting for crew')
             theme_key=category if category in THEMES else 'orbit'
             accent=color.rgb32(*THEMES[theme_key][1])
-            Entity(parent=self.tables,model='cube',position=(x,.9,z),scale=(2.4,.18,1.3),color=color.white,texture=surface('brushed-metal'))
-            Entity(parent=self.tables,model='cube',position=(x,1.01,z),scale=(2.45,.05,1.35),color=accent)
+            Entity(parent=self.tables,model='cube',position=(x,.9,z),scale=(2.4,.18,1.3),color=color.white,texture=surface('brushed-metal'),shader=material_shader)
+            Entity(parent=self.tables,model='cube',position=(x,1.01,z),scale=(2.45,.05,1.35),color=accent,texture=surface('rubber-grip'),shader=material_shader)
             for dx in (-.95,.95):
-                for dz in (-.45,.45):Entity(parent=self.tables,model='cube',position=(x+dx,.45,z+dz),scale=(.12,.9,.12),color=color.light_gray,texture=surface('brushed-metal'))
+                for dz in (-.45,.45):Entity(parent=self.tables,model='cube',position=(x+dx,.45,z+dz),scale=(.12,.9,.12),color=color.light_gray,texture=surface('brushed-metal'),shader=material_shader)
             self.table_obstacles.append(Obstacle(x,z,2.4,1.3))
             ready=state['confirmed'].get(category)==getattr(s.design,category)
             role=next(r for r,(_,cs) in ROLES.items() if category in cs)

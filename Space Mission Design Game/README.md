@@ -1,5 +1,13 @@
 # Mission Forge - playable campaign
 
+## Earth and object materials (2026-11-15)
+
+The entry Earth, orbit-table globes and operations Earth use bundled NASA Blue Marble imagery. The large globes have smooth geometry, a separate NASA cloud layer, soft atmosphere and directional lighting. Rooms, doors, benches, equipment, spacecraft previews, carried parts and remote suits now have metal panels, deck plate, foil, solar cells, ceramic, rubber, fabric and optical-glass materials. Existing books already keep their authored cover textures; readable UI, glowing markers and lights retain their display styling.
+
+No new dependencies or runtime internet connection are required. Texture sources, credits and rebuild instructions are in `content/materials/README.md`. Earth maps are 2048x1024; equipment maps are at most 512x512, cached with mipmapping/anisotropic filtering. Geometry allocation fixes ensure one globe or tank never steals another object's mesh. Mission costs/physics, fullscreen controls and networking are unchanged.
+
+Verification: **67 automated tests** pass. `python scripts/verify_material_upgrade.py` renders entry/workshop/preview/orbit views; `python scripts/verify_four_player_scene.py` confirms joins, shared previews, textured carried parts/avatars and approval. Evidence is ignored under `runtime/material-upgrade/` and `runtime/facility-review/`. Physical Arch graphics remain manual.
+
 ## Multiplayer reliability update (2026-11-15)
 
 **2, 3 and 4 players are supported: one host and up to three friends.** Update **every laptop to the same checkout and restart all games** before testing this transport revision. Host one room with N; every friend joins that same host Wi-Fi IPv4 and six-digit code, not another guest's address. No new packages or firewall changes are installed automatically.

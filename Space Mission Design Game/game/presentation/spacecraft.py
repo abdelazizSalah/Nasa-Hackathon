@@ -1,6 +1,7 @@
 """Procedural spacecraft shared by the design bay and its panel preview."""
 from ursina import Entity, color
-from ursina.shaders import basic_lighting_shader
+from game.presentation.materials import surface
+from game.presentation.material_lighting import material_shader
 
 
 class Spacecraft:
@@ -17,9 +18,13 @@ class Spacecraft:
             self.arrays.append((side,wing))
         self.sensor=self.part((0,-.1,-.42),(.35,.35,.25),color.rgb32(53,177,188),'sphere')
         self.radio=self.part((.3,.52,.1),(.35,.12,.35),color.rgb32(229,235,243),'sphere')
+        self.root.children[1].texture=surface('thermal-foil');self.root.children[1].color=color.white
+        self.sensor.texture=surface('optical-glass')
+        for _,wing in self.arrays:wing.texture=surface('solar-cells');wing.color=color.white
 
     def part(self, position, scale, tint, model='cube'):
-        return Entity(parent=self.root,model=model,position=position,scale=scale,color=tint,shader=basic_lighting_shader)
+        return Entity(parent=self.root,model=model,position=position,scale=scale,color=tint,
+                      texture=surface('equipment-panel' if model=='cube' else 'brushed-metal'),shader=material_shader)
 
     def apply(self, design):
         extended=design.power=='extended'

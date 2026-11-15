@@ -9,6 +9,8 @@ from ursina import Entity,Text,Button,InputField,scene,color,destroy
 from game.network.lan import Server,Client
 from game.domain.assembly import owned,assignments,ROLES
 from game.presentation.carried import set_carried, stacked_inventory
+from game.presentation.materials import surface
+from game.presentation.material_lighting import material_shader
 from game.domain.design import Design
 from game.domain.navigation import Pose
 
@@ -136,11 +138,11 @@ class Crew:
             if role not in self.avatars:
                 root=Entity(parent=scene,position=(p['x'],0,p['z']))
                 tint={'engineer':CYAN,'operations':color.orange,'crew3':color.violet,'crew4':color.lime}[role]
-                Entity(parent=root,model='cube',position=(0,.75,0),scale=(.5,1.2,.35),color=tint)
-                Entity(parent=root,model='cube',position=(.33,.95,.13),scale=(.18,.5,.22),color=tint)
-                Entity(parent=root,model='sphere',position=(.44,.84,.26),scale=.16,color=color.light_gray)
-                Entity(parent=root,model='sphere',position=(0,1.55,0),scale=.48,color=color.light_gray)
-                Entity(parent=root,model='cube',position=(0,1.55,.23),scale=(.32,.18,.04),color=color.azure)
+                Entity(parent=root,model='cube',position=(0,.75,0),scale=(.5,1.2,.35),color=tint,texture=surface('suit-fabric'),shader=material_shader)
+                Entity(parent=root,model='cube',position=(.33,.95,.13),scale=(.18,.5,.22),color=tint,texture=surface('suit-fabric'),shader=material_shader)
+                Entity(parent=root,model='sphere',position=(.44,.84,.26),scale=.16,color=color.light_gray,texture=surface('rubber-grip'),shader=material_shader)
+                Entity(parent=root,model='sphere',position=(0,1.55,0),scale=.48,color=color.light_gray,texture=surface('ceramic-tiles'),shader=material_shader)
+                Entity(parent=root,model='cube',position=(0,1.55,.23),scale=(.32,.18,.04),color=color.white,texture=surface('optical-glass'),shader=material_shader)
                 root.label=Text('',parent=root,position=(0,2.05,0),scale=1.5,origin=(0,0),billboard=True,color=tint)
                 self.avatars[role]=root
             root=self.avatars[role]; factor=min(1,dt*12)

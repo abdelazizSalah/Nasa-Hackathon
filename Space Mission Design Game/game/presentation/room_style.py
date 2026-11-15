@@ -11,7 +11,8 @@ THEMES={
 
 def decorate(facility,x,key):
     h=facility.hub;_,rgb,wall,role,task,next_=THEMES[key];accent=color.rgb32(*rgb)
-    h.box((x,2.25,13.89),(12,2.9,.04),color.rgb32(*wall),shader=False)
+    panel=h.box((x,2.25,13.89),(12,2.9,.04),color.rgb32(*wall),shader=False,texture=surface('wall-panels'))
+    panel.texture_scale=(6,1.5)
     facility.label('ROLE: '+role,(x,2.78,13.77),.105,accent)
     facility.label(task,(x,2.40,13.76),.10,color.white)
     facility.label(next_,(x,2.04,13.75),.085,accent)
@@ -23,14 +24,14 @@ def decorate(facility,x,key):
         for i in range(4):h.box((x-4.8,1.2+i*.32,13.6),(1,.18,.12),accent,shader=False)
     elif key=='radio':
         h.box((x-4.8,1.45,13.45),(.15,1.3,.15),accent)
-        Entity(model='sphere',position=(x-4.8,2.1,13.35),scale=(.9,.18,.9),rotation_x=65,color=accent)
+        Entity(model='sphere',position=(x-4.8,2.1,13.35),scale=(.9,.18,.9),rotation_x=65,color=color.white,texture=surface('brushed-metal'))
     elif key=='sensor':
-        Entity(model='sphere',position=(x-4.8,1.8,13.48),scale=(1,1,.15),color=color.rgb32(30,100,120))
-        Entity(model='sphere',position=(x-4.8,1.8,13.36),scale=(.65,.65,.16),color=accent)
+        Entity(model='sphere',position=(x-4.8,1.8,13.48),scale=(1,1,.15),color=color.light_gray,texture=surface('brushed-metal'))
+        Entity(model='sphere',position=(x-4.8,1.8,13.36),scale=(.65,.65,.16),color=color.white,texture=surface('optical-glass'))
     elif key=='integration':
         h.box((x,.035,7.6),(6.5,.04,.22),color.white,shader=False,texture=surface('hazard-stripes'))
 
 def texture_spacecraft(craft):
-    craft.root.children[0].texture=surface('brushed-metal')
+    craft.root.children[0].texture=surface('equipment-panel')
     for _,wing in craft.arrays:
         wing.texture=surface('solar-cells');wing.color=color.white

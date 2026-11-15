@@ -2,8 +2,10 @@
 from ursina import Entity, Text, color, destroy, Mesh
 from game.presentation.spacecraft import Spacecraft
 from game.presentation.materials import surface
-from ursina.shaders import basic_lighting_shader
+from game.presentation.material_lighting import material_shader
+from game.presentation.planet import globe_mesh,earth_shader
 import math
+from copy import deepcopy
 
 def cylinder_mesh():
     """Capped tank mesh with explicit UVs/normals, without optional numpy."""
@@ -16,7 +18,7 @@ def cylinder_mesh():
         for y,order in [(-.5,(a,b)),(.5,(b,a))]:
             for p in [(0,y,0)]+[(.5*math.cos(t),y,.5*math.sin(t)) for t in order]:
                 vertices.append(p);normals.append((0,y*2,0));uvs.append((p[0]+.5,p[2]+.5))
-    return Mesh(vertices=vertices,normals=normals,uvs=uvs)
+    return Mesh(vertices=vertices,triangles=[(i,i+2,i+1) for i in range(0,len(vertices),3)],normals=normals,uvs=uvs)
 
 CYLINDER=cylinder_mesh()
 
@@ -30,13 +32,13 @@ class Part(Entity):
         super().__init__(**kwargs)
         self.category=category
         def part(position,scale,tint,model='cube',texture=None,rotation=(0,0,0)):
-            if model=='cylinder':model=CYLINDER
-            return Entity(parent=self,model=model,position=position,scale=scale,color=tint,texture=texture,rotation=rotation,shader=basic_lighting_shader)
+            if model=='cylinder':model=deepcopy(CYLINDER)
+            return Entity(parent=self,model=model,position=position,scale=scale,color=tint,texture=texture or surface('brushed-metal'),rotation=rotation,shader=material_shader)
         if category=='sensor':
             advanced=design.sensor=='advanced';tint=color.orange if advanced else color.cyan
             part((0,0,0),(.62,.50,.45),tint,texture=surface('brushed-metal'))
             part((0,0,-.28),(.38,.38,.18),color.rgb32(15,30,50),'sphere')
-            part((0,0,-.38),(.24,.24,.07),color.azure,'sphere')
+            part((0,0,-.38),(.24,.24,.07),color.white,'sphere',surface('optical-glass'))
             if advanced:part((.24,.18,-.24),(.12,.12,.12),color.yellow,'sphere')
         elif category=='power':
             craft=Spacecraft(self);craft.apply(design);craft.root.rotation=(0,0,0)
@@ -51,13 +53,14 @@ class Part(Entity):
             part((0,.25,0),(.65 if fast else .45,.15,.65 if fast else .45),color.white,'sphere',rotation=(45,0,0))
             part((0,.37,-.12),(.06,.20,.06),tint,'cylinder')
         elif category=='orbit':
-            part((0,0,0),(.60,.60,.60),color.azure,'sphere')
+            Entity(parent=self,model=globe_mesh(),scale=.60,rotation_y=180,
+                   texture=surface('earth-blue-marble'),color=color.white,shader=earth_shader)
             for i in range(28):
                 a=i*math.tau/28
                 part((.48*math.cos(a),.15*math.sin(a),.48*math.sin(a)),(.035,.035,.035),color.cyan,'sphere')
         elif category=='launcher':
             tint=color.orange if design.launcher=='heavy' else color.white
-            part((0,-.05,0),(.30,.75,.30),tint,'cylinder',surface('brushed-metal'))
+            part((0,-.05,0),(.30,.75,.30),tint,'cylinder',surface('ceramic-tiles'))
             part((0,.40,0),(.30,.30,.30),color.red,'sphere')
             for side in (-1,1):part((side*.23,-.3,0),(.22,.25,.12),color.red,rotation=(0,0,side*25))
         elif category=='fuel':
