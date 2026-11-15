@@ -2,7 +2,7 @@
 
 ## Play without installing Python
 
-Windows users can open **`play/windows/MissionForge.exe` at repository root** after cloning or extracting the repo ZIP. Read [the player startup README](../play/README.md) for controls, saves, LAN play, optional Live GMAT and Linux/native builds. Cached mode requires neither GMAT nor internet. The executable includes all dependencies/assets and opens fullscreen.
+Windows users can open [Game executable](../play/windows/MissionForge.exe) at repository root** after cloning or extracting the repo ZIP. Read [the player startup README](../play/README.md) for controls, saves, LAN play, optional Live GMAT and Linux/native builds. Cached mode requires neither GMAT nor internet. The executable includes all dependencies/assets and opens fullscreen.
 
 [The complete six-page handbook](../output/pdf/mission-forge-complete-handbook.pdf) explains every table/choice, numerical trade-offs, constraints, units, telemetry and the successful run. It distinguishes GMAT position data from game-calculated resources and explains the 60 MB goal versus the 120 MB Targeted cap.
 
