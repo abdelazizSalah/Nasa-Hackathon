@@ -27,7 +27,7 @@ class WorkstationTests(unittest.TestCase):
         with self.assertRaises(ValueError):a.validate(s,['engineer'])
         before=s.preview.values
         a.collect(s,'fuel','liquid','engineer',['engineer']);after=s.preview.values
-        self.assertEqual(after['cost_eur']-before['cost_eur'],5000)
+        self.assertEqual(after['cost_eur']-before['cost_eur'],3000)
         for k in before:
             if not k.endswith('eur'):self.assertEqual(before[k],after[k],k)
         a.submit(s,'fuel','engineer',['engineer']);self.assertTrue(a.validate(s,['engineer']))

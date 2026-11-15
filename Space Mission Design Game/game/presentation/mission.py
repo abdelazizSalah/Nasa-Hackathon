@@ -7,6 +7,8 @@ from pathlib import Path
 import textwrap
 from ursina import Entity,Text,Button,camera,color,destroy,scene
 from game.domain.campaign import Campaign,MISSIONS
+from game.domain.guidance import next_step,NAMES
+from game.domain.assembly import CATEGORIES
 from game.domain.operations import simulate
 from game.domain.economy import eur
 from game.orbit.provider import trajectory
@@ -29,27 +31,51 @@ class MissionUI:
 
     def open(self):
         h=self.hub
-        if h.panel is not None: h.close_panel()
-        h.panel_base('mission','MISSION CONTROL','Flood Watch / consecutive objectives / M opens this tablet')
-        p=h.panel; stage=self.campaign.stage
-        net=getattr(h,'network',None); crew=net is not None and net.active
-        role=net.role if crew else None
-        if crew:
-            Text('CREW / '+str(role)+' / '+str(len(net.players))+'/4 connected',parent=p,position=(.12,.27,-.04),scale=.6,color=CYAN)
-        for i,title in enumerate(MISSIONS):
-            mark='DONE' if i<stage else 'NOW' if i==stage else 'LOCKED'
-            Text(f'{i+1}. {mark} / {title}',parent=p,position=(-.65,.22-i*.045,-.04),scale=.76,color=CYAN if i<=stage else color.gray)
-        Text('\n'.join(textwrap.wrap(self.message,104)),parent=p,position=(-.65,-.035,-.04),scale=.72)
-        owner=h.facility.stage_owner()
-        Button('COMPLETE CURRENT TASK',parent=p,position=(-.34,-.16,-.04),scale=(.61,.055),text_size=.7,
-               disabled=crew and (owner!=role or net.busy),on_click=self.advance)
-        Button('LAUNCH & OPERATE',parent=p,position=(.34,-.16,-.04),scale=(.61,.055),text_size=.7,
-               disabled=stage<4 or not h.facility.state['ready'] or self.future is not None or not h.facility.flight_owner() or (crew and net.busy),on_click=self.launch)
-        Button('SOURCE: '+self.mode.upper(),parent=p,position=(-.34,-.235,-.04),scale=(.61,.055),text_size=.7,disabled=crew and (not h.facility.flight_owner() or net.busy),on_click=self.toggle_source)
-        Button('PLAN: '+('TARGETED' if self.targeted else 'CONTINUOUS'),parent=p,position=(.34,-.235,-.04),scale=(.61,.055),text_size=.7,disabled=crew and (not h.facility.flight_owner() or net.busy),on_click=self.toggle_plan)
+        if h.panel is not None:h.close_panel()
+        h.panel_base('mission','MISSION CONTROL / APPROVAL & LAUNCH','1. Pick six choices   2. Place six contributions   3. Host approves   4. Launch')
+        p=h.panel;state=h.facility.state;net=h.network;crew=net.active
+        busy=self.future is not None or (crew and net.busy)
+        preparing=self.future is not None or (crew and getattr(net,'preparing',False))
+        ready=state['ready'] and self.campaign.stage>=4 and self.campaign.approved==asdict(h.design_session.design)
+        can_launch=h.facility.host() or h.facility.flight_owner()
+        heading='PREPARING '+self.mode.upper()+' TRAJECTORY ON '+('HOST' if crew else 'THIS LAPTOP') if preparing else 'READINESS APPROVED / READY TO LAUNCH' if ready else 'READINESS NOT APPROVED YET'
+        Text(heading,parent=p,position=(-.65,.255,-.05),scale=.96,color=CYAN if ready else AMBER)
+        for i,c in enumerate(CATEGORIES):
+            status='PLACED' if c in state['submitted'] else 'PICKED / PLACE NEXT' if c in state['confirmed'] else 'PICK AT ITS TABLE'
+            Text(NAMES[c]+' / '+status,parent=p,position=(-.65,.195-i*.041,-.05),scale=.74,color=CYAN if c in state['submitted'] else color.white)
+        host_name=h.facility.players.get('engineer',{}).get('name','You')
+        Text('READINESS = HOST VALIDATION',parent=p,position=(.12,.195,-.05),scale=.69,color=AMBER)
+        info=('Approved by '+host_name+'.\nHost OR Flight engineer can launch from here.' if ready else
+              'Host: '+host_name+'\nPlace all six contributions, then use\nthe gold APPROVE button below.\nThe big screen in Integration explains failures.')
+        if not ready and len(state['submitted'])==len(CATEGORIES) and state['issues']:
+            info='VALIDATION NEEDS CHANGES\n'+state['issues'][0]['label']+' failed.\nRead the red Integration screen;\nthe next-step marker points to the repair table.'
+        Text(info,parent=p,position=(.12,.15,-.05),scale=.67)
+        Text('Mission cost '+eur(state['cost_eur'])+' / '+eur(state['budget_eur']),parent=p,position=(.12,.025,-.05),scale=.67,color=CYAN)
+        note=('Request accepted. The launch scene starts automatically when the trajectory is ready.' if preparing else
+              'Waiting for every crew member to finish playback.' if busy else
+              'Ready. Press the green LAUNCH NOW button; no additional readiness task is required.' if ready else self.message)
+        Text('\n'.join(textwrap.wrap(note,104)),parent=p,position=(-.65,-.085,-.05),scale=.70,color=AMBER if busy else color.white)
+        def button(label,x,y,width,fn,enabled=True,tint=None):
+            return Button(label,parent=p,position=(x,y,-.06),scale=(width,.06),text_size=.78,
+                          color=tint or (color.rgb32(24,115,129) if enabled else color.rgb32(55,65,80)),
+                          text_color=color.white,disabled=not enabled,on_click=fn)
+        button('READINESS APPROVED' if ready else 'HOST: VALIDATE & APPROVE',-.34,-.19,.61,self.approve,
+               h.facility.host() and len(state['submitted'])==len(CATEGORIES) and not busy,
+               color.rgb32(42,106,74) if ready else color.rgb32(145,99,29))
+        launch_label='PREPARING / PLEASE WAIT' if preparing else 'WAITING FOR CREW' if busy else 'LAUNCH NOW' if ready else 'LAUNCH LOCKED / APPROVAL NEEDED'
+        button(launch_label,.34,-.19,.61,self.launch,ready and can_launch and not busy,
+               color.rgb32(22,140,87) if ready and can_launch and not busy else color.rgb32(55,65,80))
+        button('SOURCE: '+self.mode.upper(),-.34,-.265,.61,self.toggle_source,not busy and can_launch)
+        button('PLAN: '+('TARGETED' if self.targeted else 'CONTINUOUS'),.34,-.265,.61,self.toggle_plan,not busy and can_launch)
         for x,label,fn in [(-.48,'SAVE',self.save),(0,'LOAD',self.load),(.48,'NEW MISSION',self.reset)]:
-            Button(label,parent=p,position=(x,-.31,-.04),scale=(.4,.05),text_size=.7,disabled=crew and (role!='engineer' or net.busy),on_click=fn)
-        Text('Cached GMAT works offline. Live GMAT uses your local installation.\nTargeted stops imaging after 120 MB; Continuous risks storage overload.',parent=p,position=(-.65,-.355,-.04),scale=.6,color=color.light_gray)
+            button(label,x,-.335,.40,fn,h.facility.host() and not busy)
+        Text('CACHED starts without GMAT installed. LIVE waits for GMAT on the host.\nUse TARGETED for the first run; all calculated results stay authoritative.',parent=p,position=(-.65,-.377,-.05),scale=.55,color=color.light_gray)
+
+    def approve(self):
+        self.hub.facility.action('validate')
+        if not self.hub.network.active:
+            self.message='Readiness approved. Press the green LAUNCH NOW button.' if self.hub.facility.state['ready'] else 'Validation failed. Read the red screen or the next-step guide and revise the listed components.'
+            self.open()
 
     def advance(self):
         if self.crew_action('advance'):return
@@ -90,10 +116,11 @@ class MissionUI:
         self.message='New mission started. Learning cards remain accessible.'; self.open()
 
     def launch(self):
-        if self.crew_action('launch'):return
+        if self.hub.network.active:
+            self.message='Launch request sent to the host. Preparing trajectory...';self.crew_action('launch');self.open();return
         session=self.hub.design_session
-        if not self.hub.facility.state['ready'] or math.hypot(self.hub.pose.x-76,self.hub.pose.z-6.5)>3.2:
-            self.message='Complete integration approval and approach the launch-readiness console.';self.open();return
+        if not self.hub.facility.state['ready']:
+            self.message='Place all six parts/plans, then ask the host to press VALIDATE & APPROVE.';self.open();return
         if self.campaign.stage<4 or self.campaign.approved!=asdict(session.design):
             self.message='Pass readiness for this exact configuration first.'; self.open(); return
         design=session.design; targeted=self.targeted; mode=self.mode

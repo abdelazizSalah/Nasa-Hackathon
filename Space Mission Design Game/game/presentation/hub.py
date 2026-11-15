@@ -9,6 +9,7 @@ import webbrowser
 from ursina import (Entity, Text, Button, DirectionalLight, AmbientLight, camera,
                     color, held_keys, mouse, application, scene, destroy)
 from ursina.shaders import basic_lighting_shader, unlit_shader
+from ursina.prefabs.slider import Slider
 from game.domain.navigation import Pose, Obstacle, advance
 from game.domain.look import mouse_look
 from game.presentation.responsive import ResponsivePanel
@@ -28,6 +29,12 @@ AMBER = color.rgb32(255, 190, 89)
 class Hub:
     def __init__(self):
         self.cards = json.loads((ROOT / 'content/learning_cards.json').read_text(encoding='utf-8'))['cards']
+        self.settings_path=ROOT/'runtime/player_settings.json'
+        self.sprint_speed=5.4
+        try:
+            value=float(json.loads(self.settings_path.read_text(encoding='utf-8'))['sprint_speed'])
+            if math.isfinite(value):self.sprint_speed=max(3,min(60,value))
+        except (OSError,ValueError,TypeError,KeyError):pass
         self.pose = Pose()
         from game.domain.locomotion import Locomotion
         self.locomotion=Locomotion()
@@ -141,20 +148,21 @@ class Hub:
         self.label('E / OPEN BOOK LIBRARY', (0,.85,9.97), .12, CYAN)
         self.targets.append(('library',(0,0,9.5)))
         self.label('LEARN  >  DESIGN  >  VERIFY', (0,2.7,-6.78), .19, CYAN, rotation_y=180)
-        self.label('ARROWS: MOVE     A/D: TURN     E: INTERACT', (0,2.2,-6.77), .11, rotation_y=180)
+        self.label('W/S MOVE   A/D STRAFE   MOUSE LOOK   SHIFT RUN   E USE', (0,2.2,-6.77), .11, rotation_y=180)
         rng=random.Random(17)
         for _ in range(70):
             Entity(model='sphere', position=(rng.uniform(-35,35),rng.uniform(6,22),rng.uniform(-25,35)), scale=rng.uniform(.02,.06), color=MUTED)
 
     def _hud(self):
         self.hud = ResponsivePanel(parent=camera.ui,width=1.6)
-        Entity(parent=self.hud, model='quad', position=(0,.435), scale=(1.6,.13), color=color.rgba32(5,13,24,240))
+        Entity(parent=self.hud, model='quad', position=(0,.40), scale=(1.6,.20), color=color.rgba32(5,13,24,240))
         Text('MISSION FORGE', parent=self.hud, position=(-.76,.475), scale=1.05, color=CYAN)
         self.location = Text('MISSION CONTROL', parent=self.hud, position=(.38,.465), scale=.7, color=MUTED)
         self.task = Text('EXPLORE / Open the Learning Lab ahead', parent=self.hud, position=(-.76,.425), scale=.72)
         Entity(parent=self.hud, model='quad', y=-.445, scale=(1.6,.11), color=color.rgba32(5,13,24,235))
-        Text('W/S  Walk   A/D  Strafe   Mouse  Look   SPACE  Jump   ALT  Crouch   E  Use   I  Parts   N  Crew', parent=self.hud,
+        Text('W/S  Walk   A/D  Strafe   Mouse  Look   SHIFT Run   SPACE Jump   ALT Crouch   E  Use   I  Parts   N  Crew', parent=self.hud,
              position=(-.76,-.422), scale=.69, color=MUTED)
+        self.progress=Text('',parent=self.hud,position=(-.76,.35),scale=.60,color=WHITE)
         self.resources=Text('',parent=self.hud,position=(-.76,-.463),scale=.58,color=CYAN)
         self.refresh_resources()
         self.prompt = Text('', parent=self.hud, origin=(0,0), position=(0,-.355), scale=.9, color=CYAN)
@@ -213,7 +221,8 @@ class Hub:
         self.pose=advance(self.pose,(held_keys['w']-held_keys['s'])*speed,
                           held_keys['right arrow']-held_keys['left arrow'],dt,blockers,
                           frozen=self.modal is not None or not self.focused,
-                          strafe=(held_keys['d']-held_keys['a'])*speed)
+                          strafe=(held_keys['d']-held_keys['a'])*speed,
+                          speed=self.sprint_speed if (held_keys['shift'] or held_keys['left shift'] or held_keys['right shift']) and not self.locomotion.crouch else 3)
         self._sync_camera()
         self.location.text = 'ENGINEERING WING' if self.pose.x>7 else 'LEARNING LAB' if self.pose.z>5.3 else 'MISSION CONTROL'
         if self.design_session.history:
@@ -284,6 +293,7 @@ class Hub:
     def panel_base(self,kind,title,subtitle):
         if self.panel is not None:self.close_panel()
         self.modal=kind
+        self.hud.enabled=False
         mouse.locked=False
         self._look_ready=False
         self.panel=ResponsivePanel(parent=camera.ui)
@@ -319,10 +329,31 @@ class Hub:
 
     def open_pause(self):
         self.panel_base('pause','MISSION PAUSED','Explore the hub at your own pace.')
-        Text('W / S          Walk forward and backward\nA / D          Step sideways\nMOUSE          Look in every direction\nLEFT / RIGHT   Optional keyboard turning\nSPACE          Jump / ALT: Crouch\nE              Open a nearby door or console\nESC            Close reading panels / pause\n\nThe mouse is free in menus; close this panel to look around.',parent=self.panel,
+        Text('W / S          Walk forward and backward\nA / D          Step sideways\nMOUSE          Look in every direction\nLEFT / RIGHT   Optional keyboard turning\nSHIFT          Run\nSPACE          Jump / ALT: Crouch\nE              Open a nearby door or console\nESC            Close reading panels / pause\n\nThe mouse is free in menus; close this panel to look around.',parent=self.panel,
              position=(-.61,.20,-.04),scale=.95,color=WHITE)
         Button('RESUME / ENTER',parent=self.panel,position=(-.33,-.27,-.04),scale=(.55,.07),color=color.rgb32(26,96,110),text_size=.85,on_click=self.close_panel)
         Button('EXIT GAME',parent=self.panel,position=(.33,-.27,-.04),scale=(.55,.07),color=color.rgb32(52,61,76),text_size=.85,on_click=application.quit)
+        Button('SETTINGS / RUN SPEED',parent=self.panel,position=(0,-.17,-.04),scale=(.70,.06),color=color.rgb32(26,96,110),text_size=.85,on_click=self.open_settings)
+
+    def open_settings(self):
+        self.panel_base('settings','SETTINGS','Personal controls / saved on this laptop')
+        Text('SHIFT / RUN SPEED',parent=self.panel,position=(-.60,.20,-.04),scale=1.1,color=CYAN)
+        value=Text('',parent=self.panel,position=(-.60,.135,-.04),scale=.95,color=WHITE)
+        def change():
+            self.sprint_speed=round(max(3,min(60,self.sprint_slider.value)),1)
+            value.text=f'{self.sprint_speed:g} m/s  /  {self.sprint_speed/3:.1f}x walking speed'
+        self.sprint_slider=Slider(min=3,max=60,default=self.sprint_speed,step=.1,dynamic=True,
+                                 parent=self.panel,position=(-.55,.035,-.06),scale=2,
+                                 height=.025,bar_color=color.rgb32(45,80,103),on_value_changed=change)
+        self.sprint_slider.knob.color=CYAN
+        change()
+        Text('3 m/s / WALK',parent=self.panel,position=(-.55,-.055,-.04),scale=.7,color=MUTED)
+        Text('60 m/s / TURBO',parent=self.panel,position=(.25,-.055,-.04),scale=.7,color=AMBER)
+        Text('Hold Shift while moving to use this speed. Walking stays at 3 m/s.\nMaximum is 20x walking speed; walls and tables still block movement.\nYour choice is saved when you close Settings.',parent=self.panel,
+             position=(-.60,-.13,-.04),scale=.73,color=WHITE)
+        Button('RESET / 5.4 m/s',parent=self.panel,position=(-.33,-.29,-.04),scale=(.55,.07),color=color.rgb32(52,61,76),text_size=.85,
+               on_click=lambda:setattr(self.sprint_slider,'value',5.4))
+        Button('SAVE & RESUME',parent=self.panel,position=(.33,-.29,-.04),scale=(.55,.07),color=color.rgb32(26,96,110),text_size=.85,on_click=self.close_panel)
 
     def open_design(self):
         self.panel_base('design','SPACECRAFT DESIGN','Flood Watch / trade study / all numbers are teaching assumptions')
@@ -349,11 +380,17 @@ class Hub:
         if self.mission.flight is not None:
             self.mission.finish_flight(); return
         if self.modal=='learning':self.library.dispose()
+        if self.modal=='settings':
+            try:
+                self.settings_path.parent.mkdir(parents=True,exist_ok=True)
+                self.settings_path.write_text(json.dumps({'sprint_speed':self.sprint_speed}),encoding='utf-8')
+            except OSError:self.toast('Run speed applied for this session; settings could not be saved.')
         self.events.append('panel_closed')
         self.panel.enabled=False
         destroy(self.panel)
         self.panel=None
         self.modal=None
+        self.hud.enabled=True
         self.design_panel=None
         mouse.locked=bool(self.focused)
         self._look_ready=False

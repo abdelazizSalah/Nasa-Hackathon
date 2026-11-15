@@ -162,8 +162,6 @@ class Room:
                 else:self.assembly.submit(self.session,category,role,self.players)
             elif action=='validate':
                 if role!='engineer':raise ValueError('Only the host finalizes validation.')
-                p=self.players[role]
-                if min(math.hypot(p['x']-72,p['z']-6.5),math.hypot(p['x']-68,p['z']-9.8))>3.2:raise ValueError('Approach the integration validation console or red issues screen first.')
                 if self.assembly.validate(self.session,self.players):
                     while self.campaign.stage<4:
                         old=self.campaign.stage
@@ -192,7 +190,7 @@ class Room:
                 message=self.campaign.advance(self.session,self.cards)
                 self.peers[role].send({'kind':'notice','message':message})
             elif action in ('plan','source'):
-                if 'flight' not in assignments(self.players).get(role,[]): raise ValueError('Mission & Flight Dynamics controls the plan and orbit source.')
+                if role!='engineer' and 'flight' not in assignments(self.players).get(role,[]): raise ValueError('The host or Flight engineer controls the plan and orbit source.')
                 if action=='plan': self.targeted=not self.targeted
                 else:self.mode='live' if self.mode=='cached' else 'cached'
             elif action in ('save','load','new'):
@@ -215,9 +213,7 @@ class Room:
                     self.histories={r:[] for r in self.peers}
                 self.peers[role].send({'kind':'notice','message':{'save':'Shared mission saved on the host.','load':'Shared mission restored on both laptops.','new':'New shared mission started.'}[action]})
             elif action=='launch':
-                if 'flight' not in assignments(self.players).get(role,[]):raise ValueError('Mission & Flight Dynamics initiates launch.')
-                p=self.players[role]
-                if math.hypot(p['x']-76,p['z']-6.5)>3.2:raise ValueError('Approach the launch-readiness console first.')
+                if role!='engineer' and 'flight' not in assignments(self.players).get(role,[]):raise ValueError('The host or Flight engineer can launch after readiness approval.')
                 if not self.assembly.ready(self.session):raise ValueError('Complete physical integration and host validation before launch.')
                 if self.campaign.stage<4 or self.campaign.approved!=asdict(self.session.design): raise ValueError('Complete shared readiness first.')
                 self.busy=True; self.result=None; self.generation+=1
