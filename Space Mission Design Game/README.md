@@ -8,6 +8,70 @@ Windows users can open [Game executable](../play/windows/MissionForge.exe) at re
 
 Maintainers: install `requirements-build.txt`, run `python scripts/build_executable.py`, then test `../play/windows/MissionForge.exe --verify-package`. The Windows binary was verified at 1920x1080 with OpenGL, bundled books/materials, cached science success and real localhost full 2/3/4-player missions. Linux binary builds have a manual GitHub Actions workflow; native Arch acceptance remains pending. Rebuild and commit the binary/checksum with source updates so cloned copies stay synchronized.
 
+## Screenshots
+
+Explore the game from mission selection and learning to spacecraft design, validation and launch.
+
+### Entry room and mission selection
+
+Start at the Earth display, select Flood Watch and follow the progress guide to your next task.
+
+![Entry room and mission selection](images/Spawning_Room.png)
+
+### Controls and instructions
+
+The welcome panel explains movement, mouse look, interaction, inventory and multiplayer controls.
+
+![Controls and instructions](images/Instructions.png)
+
+### Aerospace learning library
+
+Explore twelve interactive books covering spaceflight, spacecraft systems and mission design.
+
+![Aerospace learning library](images/Library.png)
+
+### Cooperative multiplayer
+
+Host a shared mission or join friends on the same Wi-Fi using the host address and room code; up to four players share engineering roles.
+
+![Cooperative multiplayer](images/Network_Connectivity.png)
+
+### Payload design
+
+Choose the imaging sensor in the cyan Payload room, balancing science quality against power, mass, data production and cost.
+
+![Payload design](images/Stage1.png)
+
+### Power systems
+
+Select solar arrays and battery capacity in the amber Power room to keep the spacecraft operating through sunlight and eclipse.
+
+![Power systems](images/Stage2.png)
+
+### Communications
+
+Choose a radio in the violet Communications room and balance downlink speed against power demand, mass and budget.
+
+![Communications](images/Stage3.png)
+
+### Component choices and trade-offs
+
+Compare option prices and specifications beside a rotating spacecraft preview and the shared design's resource values.
+
+![Component choices and trade-offs](images/Component_selection_and_trades_off.png)
+
+### Satellite integration and validation
+
+Place the collected components, submit the mission plans and review the room display before the host approves readiness.
+
+![Satellite integration and validation](images/Validation_and_launch_room.png)
+
+### Mission Control and launch
+
+Track all six contributions, review readiness, select the trajectory source and observation plan, then launch after approval.
+
+![Mission Control and launch](images/Launch_dialog.png)
+
 ## Earth and object materials (2026-11-15)
 
 The entry Earth, orbit-table globes and operations Earth use bundled NASA Blue Marble imagery. The large globes have smooth geometry, a separate NASA cloud layer, soft atmosphere and directional lighting. Rooms, doors, benches, equipment, spacecraft previews, carried parts and remote suits now have metal panels, deck plate, foil, solar cells, ceramic, rubber, fabric and optical-glass materials. Existing books already keep their authored cover textures; readable UI, glowing markers and lights retain their display styling.
