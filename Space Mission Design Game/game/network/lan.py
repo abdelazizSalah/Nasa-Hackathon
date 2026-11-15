@@ -18,12 +18,13 @@ from game.domain.operations import simulate
 from game.orbit.provider import trajectory
 
 MAX_PACKET=1024*1024
+HEARTBEAT_SECONDS=2
 ROOT=Path(__file__).resolve().parents[2]
 
 def fingerprint():
     content=json.dumps(json.loads((ROOT/'content/design_catalog.json').read_text(encoding='utf-8')),sort_keys=True)
     content+=(ROOT/'game/domain/economy.py').read_text(encoding='utf-8')
-    content+='room-workflow-v3'+(ROOT/'game/domain/assembly.py').read_text(encoding='utf-8')
+    content+='room-workflow-v3-transport-v4'+(ROOT/'game/domain/assembly.py').read_text(encoding='utf-8')
     content+=json.dumps(json.loads((ROOT/'content/missions.json').read_text(encoding='utf-8')),sort_keys=True)
     content+=(ROOT/'game/domain/facility_layout.py').read_text(encoding='utf-8')
     content+=''.join((ROOT/'game/domain'/name).read_text(encoding='utf-8') for name in ('design.py','campaign.py','operations.py'))
@@ -33,6 +34,19 @@ def packet(data):
     encoded=(json.dumps(data,allow_nan=False,separators=(',',':'))+'\n').encode()
     if len(encoded)>MAX_PACKET: raise ValueError('Packet exceeds limit')
     return encoded
+
+class SnapshotQueue(queue.Queue):
+    """Keep only the latest complete snapshot, preserving ordered commands/events."""
+    def put(self,item,block=True,timeout=None):
+        if item.get('kind') not in ('players','state','pong'):
+            return super().put(item,block,timeout)
+        with self.not_full:
+            for previous in list(self.queue):
+                if previous.get('kind')==item['kind']:
+                    self.queue.remove(previous)
+                    self.unfinished_tasks-=1
+            if self.maxsize>0 and self._qsize()>=self.maxsize:raise queue.Full
+            self._put(item);self.unfinished_tasks+=1;self.not_empty.notify()
 
 class Room:
     def __init__(self,code=None):
@@ -63,7 +77,7 @@ class Room:
     def attach(self,peer,hello):
         with self.lock:
             if not isinstance(hello,dict):raise ValueError('Expected a handshake object')
-            if hello.get('version')!=2 or hello.get('catalog')!=fingerprint(): raise ValueError('Different game/content version. Use the same checkout on both laptops.')
+            if hello.get('version')!=2 or hello.get('catalog')!=fingerprint(): raise ValueError('Different game/content version. Update to the same checkout on ALL laptops, then restart.')
             if not secrets.compare_digest(str(hello.get('code','')),self.code): raise ValueError('Incorrect room code')
             role=hello.get('role')
             if role=='engineer':
@@ -76,7 +90,8 @@ class Room:
             name=''.join(c for c in str(hello.get('name','Player')) if c.isalnum() or c in ' _-')[:24] or 'Player'
             peer.role=role; self.peers[role]=peer; self.histories[role]=[]
             if self.busy and self.result is not None:self.awaiting.add(role)
-            self.players[role]={'name':name,'x':0.,'z':-4.5 if role=='engineer' else -.8,'yaw':0. if role=='engineer' else 180.,'task':'Exploring','y':0.,'crouch':False}
+            spawn_x={'engineer':0.,'operations':-1.5,'crew3':0.,'crew4':1.5}[role]
+            self.players[role]={'name':name,'x':spawn_x,'z':-4.5 if role=='engineer' else -.8,'yaw':0. if role=='engineer' else 180.,'task':'Exploring','y':0.,'crouch':False}
             if self.assembly.validation:self.assembly.validation=feedback(self.session,self.players)
             peer.send({'kind':'welcome','role':role,'spawn':self.players[role]})
             self.broadcast(self.state()); self.broadcast({'kind':'players','players':self.players})
@@ -233,24 +248,46 @@ class Room:
 
 class Handler(socketserver.StreamRequestHandler):
     def setup(self):
-        super().setup(); self.send_lock=threading.Lock(); self.role=None
+        super().setup(); self.role=None
+        self.outgoing=SnapshotQueue(maxsize=128);self.sending=True
+        self.writer=threading.Thread(target=self.write,daemon=True);self.writer.start()
     def send(self,data):
         try:
-            with self.send_lock:self.request.sendall(packet(data))
+            # Freeze mutable room data now; socket writes never hold the room lock.
+            self.outgoing.put_nowait({'kind':data.get('kind'),'wire':packet(data)})
+        except (OSError,queue.Full):self.abort()
+    def abort(self):
+        self.sending=False
+        try:self.request.shutdown(socket.SHUT_RDWR)
         except OSError:pass
+    def write(self):
+        try:
+            while self.sending or not self.outgoing.empty():
+                try:data=self.outgoing.get(timeout=.1)
+                except queue.Empty:continue
+                try:self.request.sendall(data['wire'])
+                finally:self.outgoing.task_done()
+        except OSError:self.abort()
     def handle(self):
         try:
             self.request.settimeout(8)
             line=self.rfile.readline(MAX_PACKET+1)
             if len(line)>MAX_PACKET or not line.endswith(b'\n'):return
-            self.server.room.attach(self,json.loads(line)); self.request.settimeout(10)
+            self.server.room.attach(self,json.loads(line)); self.request.settimeout(30)
             while True:
                 line=self.rfile.readline(MAX_PACKET+1)
                 if not line or len(line)>MAX_PACKET or not line.endswith(b'\n'):break
-                try:self.server.room.action(self.role,json.loads(line))
+                try:
+                    data=json.loads(line)
+                    if isinstance(data,dict) and data.get('action')=='ping':self.send({'kind':'pong'})
+                    else:self.server.room.action(self.role,data)
                 except (ValueError,KeyError,TypeError,StopIteration,OSError) as e:self.send({'kind':'notice','message':str(e)})
         except (OSError,ValueError,KeyError,TypeError) as e:self.send({'kind':'error','message':str(e)})
-        finally:self.server.room.detach(self)
+        finally:
+            self.server.room.detach(self)
+            self.sending=False
+            self.writer.join(timeout=1)
+            self.abort()
 
 class Server(socketserver.ThreadingTCPServer):
     allow_reuse_address=True; daemon_threads=True; block_on_close=False
@@ -267,9 +304,9 @@ class Server(socketserver.ThreadingTCPServer):
 
 class Client:
     def __init__(self,address,code,name,role):
-        self.events=queue.Queue(maxsize=128); self.send_lock=threading.Lock(); self.closed=False
-        self.socket=socket.create_connection(address,timeout=3)
-        self.socket.settimeout(10)
+        self.events=SnapshotQueue(maxsize=128); self.send_lock=threading.Lock(); self.closed=False
+        self.socket=socket.create_connection(address,timeout=8)
+        self.socket.settimeout(30)
         self.outgoing=queue.Queue(maxsize=32)
         self.send({'version':2,'catalog':fingerprint(),'code':code,'name':name,'role':role})
         self.writer=threading.Thread(target=self.write,daemon=True); self.writer.start()
@@ -281,8 +318,8 @@ class Client:
     def write(self):
         try:
             while not self.closed:
-                try:encoded=self.outgoing.get(timeout=.2)
-                except queue.Empty:continue
+                try:encoded=self.outgoing.get(timeout=HEARTBEAT_SECONDS)
+                except queue.Empty:encoded=packet({'action':'ping'})
                 with self.send_lock:self.socket.sendall(encoded)
         except OSError:
             self.close()
@@ -294,13 +331,14 @@ class Client:
                     if not line:break
                     if len(line)>MAX_PACKET or not line.endswith(b'\n'):raise ValueError('Invalid server packet')
                     data=json.loads(line)
+                    if data.get('kind')=='pong':continue
                     try:self.events.put(data,timeout=1)
                     except queue.Full:raise ValueError('Network queue full')
         except (OSError,ValueError) as e:
             try:self.events.put_nowait({'kind':'error','message':str(e)})
             except queue.Full:pass
         finally:
-            self.closed=True
+            self.close()
             try:self.events.put_nowait({'kind':'disconnected'})
             except queue.Full:pass
     def close(self):

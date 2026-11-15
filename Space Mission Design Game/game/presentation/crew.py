@@ -4,6 +4,7 @@ import ipaddress
 import queue
 import socket
 import textwrap
+import time
 from ursina import Entity,Text,Button,InputField,scene,color,destroy
 from game.network.lan import Server,Client
 from game.domain.assembly import owned,assignments,ROLES
@@ -18,6 +19,7 @@ class Crew:
         self.hub=hub; self.server=None; self.client=None; self.role=None; self.busy=False
         self.avatars={}; self.players={}; self.timer=0.; self.seen_flight=0; self.revision=-1
         self.message='Solo / N: play together on Wi-Fi'; self.code=''; self.port=8765
+        self.connection_started=None
         self.status=Text(self.message,parent=hub.hud,position=(-.76,.386),scale=.55,color=CYAN)
     @property
     def active(self):return self.client is not None
@@ -37,12 +39,12 @@ class Crew:
                       +f' / {sum(c in confirmed for c in owned(p,self.players))}/{len(owned(p,self.players))} choices confirmed'
                       for p,rs in roles.items()]
         Text('\n'.join(descriptions) if descriptions else 'Four roles are balanced automatically across 1-4 players.\nSelect, collect, integrate and validate together. Host controls mission/approval.',parent=p,position=(-.64,.24,-.04),scale=.67)
-        Text('\n'.join(textwrap.wrap(self.message,100)),parent=p,position=(-.64,.10,-.04),scale=.67,color=CYAN)
+        Text('\n'.join(textwrap.wrap(self.message,92)),parent=p,position=(-.64,.10,-.04),scale=.67,color=color.orange if self.client and self.client.closed else CYAN)
         if self.active:
             if self.server:
                 try:ips=', '.join(socket.gethostbyname_ex(socket.gethostname())[2])
                 except OSError:ips='Check your Wi-Fi adapter IPv4 address in network settings'
-                Text(f'Host address: {ips}\nPort: {self.port} / Room code: {self.code}\nShare your Wi-Fi IPv4 address and room code with your friend.',parent=p,position=(-.64,.02,-.04),scale=.72)
+                Text(f'Host address: {ips}\nPort: {self.port} / Room code: {self.code}\nEach friend uses this SAME Wi-Fi IPv4 and code. Capacity: {len(self.players)}/4.',parent=p,position=(-.64,.02,-.04),scale=.72)
             Button('LEAVE SESSION',parent=p,position=(0,-.24,-.04),scale=(.6,.07),on_click=self.leave)
             return
         Text('Your name',parent=p,position=(-.64,.02,-.04),scale=.7)
@@ -58,6 +60,7 @@ class Crew:
         try:
             self.server=Server(('0.0.0.0',self.port)); self.code=self.server.room.code
             self.client=Client(('127.0.0.1',self.port),self.code,name,'engineer')
+            self.role=None;self.connection_started=time.monotonic()
             self.message='Hosting / room '+self.code+' / 1-4 players; you can begin now'; self.open()
         except (OSError,ValueError) as exc:
             if self.server:self.server.stop(); self.server=None
@@ -67,6 +70,7 @@ class Crew:
             ip=ipaddress.ip_address(address.strip())
             if ip.version!=4 or ip.is_multicast or ip.is_unspecified or str(ip)=='255.255.255.255':raise ValueError('Use the host Wi-Fi IPv4 address')
             self.client=Client((str(ip),self.port),code.strip(),name,'operations')
+            self.role=None;self.connection_started=time.monotonic()
             self.message='Connecting to '+str(ip)+'...'; self.open()
         except (OSError,ValueError) as exc:self.message='Could not join: '+str(exc); self.open()
     def leave(self):
@@ -74,6 +78,7 @@ class Crew:
         if self.client:self.client.close()
         if self.server:self.server.stop()
         self.client=None; self.server=None; self.role=None; self.busy=False
+        self.connection_started=None
         self.hub.design_session.history=[]
         self.revision=-1; self.seen_flight=0; self.code=''
         for avatar in self.avatars.values():destroy(avatar)
@@ -88,6 +93,7 @@ class Crew:
             except queue.Empty:break
             kind=data.get('kind')
             if kind=='welcome':
+                self.connection_started=None
                 self.role=data['role']; p=data['spawn']; self.hub.pose=Pose(p['x'],p['z'],p['yaw'])
                 self.hub.pitch=0
                 motion=self.hub.locomotion;motion.y=p.get('y',0);motion.velocity=0;motion.grounded=True;motion.crouch=False
@@ -104,9 +110,16 @@ class Crew:
                 self.message=data.get('message','Connection error'); self.hub.toast(self.message)
                 self.hub.facility.message=self.message;self.hub.facility.refresh_modal()
                 if self.hub.modal=='mission':self.hub.mission.message=self.message; self.hub.mission.open()
+                elif self.hub.modal=='crew':self.open()
             elif kind=='disconnected':
-                self.players={}; self.message='DISCONNECTED / N to leave and reconnect'; self.hub.toast(self.message)
+                self.players={}; self.message='DISCONNECTED / '+self.message+' / Leave Session to join again'; self.hub.toast(self.message)
+                if self.hub.modal=='crew':self.open()
         self.timer+=dt
+        if self.role is None and not self.client.closed and self.connection_started is not None and time.monotonic()-self.connection_started>12:
+            self.client.close()
+            self.message='DISCONNECTED / Host did not confirm joining within 12 seconds. Check host IP, room code and same game version; Leave Session to retry.'
+            self.hub.toast(self.message)
+            if self.hub.modal=='crew':self.open()
         if self.client.closed:
             self.players={}
             if not self.message.startswith('DISCONNECTED'):
@@ -145,6 +158,7 @@ class Crew:
         if data['revision']<self.revision:return
         self.revision=data['revision']; h=self.hub; s=h.design_session
         h.door_open=data['door_open']
+        membership=set(self.players)!=set(data.get('players',self.players))
         self.players=data.get('players',self.players)
         h.facility.receive(data['assembly'])
         design=Design(**data['design'])
@@ -159,6 +173,7 @@ class Crew:
         h.facility.refresh_modal()
         if h.modal=='design':h.design_panel.refresh()
         elif h.modal=='mission':h.mission.open()
+        elif h.modal=='crew' and membership:self.open()
         if data['result'] is not None and data['flight_id']>self.seen_flight:
             self.seen_flight=data['flight_id']
             if data['busy']:h.mission.start_flight(data['result'])

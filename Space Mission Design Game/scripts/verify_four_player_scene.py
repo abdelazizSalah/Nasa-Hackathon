@@ -44,12 +44,18 @@ try:
     net.server=server;net.code=server.room.code;net.port=server.server_address[1]
     net.client=Client(server.server_address,net.code,'Host','engineer')
     wait(lambda:net.role=='engineer')
+    net.open()
     for i,p in enumerate(('operations','crew3','crew4')):
         clients[p]=Client(server.server_address,net.code,f'Crew {i+2}','operations')
         poses[p]={'x':i,'z':-.8,'yaw':180}
         wait(lambda:p in net.players)
+        assert h.modal=='crew'
+        def texts(root):
+            return '\n'.join(str(getattr(c,'text',''))+'\n'+texts(c) for c in root.children)
+        assert f'Crew {i+2}' in texts(h.panel),'Open lobby must refresh its roster after every join'
+        shot(f'join-{i+2}-players')
     assert len(net.players)==4 and all(len(r)==1 for r in h.facility.state['assignments'].values())
-    net.open();shot('13-four-player-lobby');h.close_panel();checks.append('four players, one unique role each')
+    net.open();shot('13-four-player-lobby');h.close_panel();checks.append('two/three/four-player joins visibly update the open lobby; four unique roles')
     net.send('mission',mission='flood-watch');wait(lambda:h.facility.state['mission']=='flood-watch')
     for category in CATEGORIES:
         owner=next(p for p in net.players if category in owned(p,net.players))
@@ -88,6 +94,15 @@ try:
     assert h.facility.state['assignments']['operations']==['communications']
     assert h.design_session.design.sensor=='advanced'
     shot('16-three-player-redistribution');checks.append('disconnect redistributes roles without losing selections')
+    # A rejected graphical join must replace Connecting with the actual reason.
+    clients['crew3']=Client(server.server_address,net.code,'Replacement','operations')
+    poses['crew3']={'x':0,'z':-.8,'yaw':0};wait(lambda:len(net.players)==4)
+    if h.panel:h.close_panel()
+    net.client.close();net.client=None;net.role=None;net.players={}
+    net.join('127.0.0.1','000000','Wrong code')
+    wait(lambda:net.client.closed and 'Incorrect room code' in net.message)
+    assert 'Incorrect room code' in texts(h.panel),'Join error must be visible in the lobby'
+    shot('18-visible-join-error');checks.append('rejected join visibly explains Incorrect room code instead of staying Connecting')
     (out/'four-player-report.json').write_text(json.dumps({'status':'passed','checks':checks,'transport':'four real localhost TCP clients; one graphical window',
         'limitations':'Separate laptops, Wi-Fi firewall and Arch Linux remain manual acceptance.'},indent=2))
     print('PASS:',', '.join(checks),flush=True)

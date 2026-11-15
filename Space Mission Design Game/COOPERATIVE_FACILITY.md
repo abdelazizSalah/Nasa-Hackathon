@@ -1,5 +1,15 @@
 # Cooperative engineering facility: implementation and handoff
 
+## Multiplayer reliability update (2026-11-15)
+
+**2, 3 and 4 players are supported: one host and up to three friends.** Update **every laptop to the same checkout and restart all games** before testing this transport revision. Host one room with N; every friend joins that same host Wi-Fi IPv4 and six-digit code, not another guest's address. No new packages or firewall changes are installed automatically.
+
+Join errors now replace the misleading Connecting message in the open lobby; an unconfirmed join times out after 12 seconds with retry guidance. The open roster updates immediately as friends join. Guests spawn separately rather than overlapping. Complete position/state snapshots are coalesced so a stalled game loop cannot accumulate hundreds of obsolete updates. Each peer has its own socket writer, preventing a slow connection from blocking all players under the room lock. Background heartbeat traffic keeps connections alive while the game loop is paused or slow.
+
+Verified **62 tests**, including simultaneous 2/3/4-player joins, idle connections beyond the old timeout, four-player movement flooding without UI consumption, slow-socket isolation, fifth-player rejection, disconnect/rejoin, and successful missions at every crew size. The four-client graphical harness verifies visible roster updates, shared preview/parts/approval and a visible wrong-code error. Evidence: ignored runtime/facility-review/. Actual separate Wi-Fi laptops and Arch remain manual acceptance.
+
+Run `.venv/Scripts/python.exe -m unittest discover -s tests -q` (Windows) or `.venv/bin/python -m unittest discover -s tests -q` (Linux); rendered check: `python scripts/verify_four_player_scene.py`. If a join still fails, copy the new displayed error. Check the host's Wi-Fi IPv4 and incoming TCP 8765/private-network permission; guest/client isolation on the Wi-Fi may prevent direct laptop connections.
+
 Implemented 2026-11-14. This extends the existing Ursina game, with no new dependencies.
 
 ## Latest workstation revision (2026-11-15)
