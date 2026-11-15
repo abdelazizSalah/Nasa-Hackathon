@@ -15,19 +15,19 @@ class EuroBudgetTests(TestCase):
         for category in catalog['categories']:
             for option in category['options']:
                 self.assertGreaterEqual(option.get('cost_eur',option.get('ground_cost_eur',0)),0)
-        self.assertEqual(evaluate(catalog,Design()).values['cost_eur'],89000)
+        self.assertEqual(evaluate(catalog,Design()).values['cost_eur'],91000)
         costly=evaluate(catalog,Design('advanced','extended','fast','wide','heavy'))
-        self.assertEqual(costly.values['cost_eur'],148000)
+        self.assertEqual(costly.values['cost_eur'],150000)
         check=next(c for c in costly.checks if c.code=='budget')
-        self.assertFalse(check.passed);self.assertIn('€148,000',check.explanation);self.assertIn('€145,000',check.explanation)
+        self.assertFalse(check.passed);self.assertIn('€150,000',check.explanation);self.assertIn('€145,000',check.explanation)
 
     def test_mission_budget_boundary_recalculates_and_blocks_collection(self):
         s=DesignSession();a=Assembly();definition=dict(next(m for m in missions() if m['available']))
-        definition['budget_eur']=89000
+        definition['budget_eur']=91000
         with patch('game.domain.economy.missions',return_value=[definition]):a.select_mission('flood-watch',s)
         self.assertTrue(next(c.passed for c in s.preview.checks if c.code=='budget'))
         a.confirm(s,'sensor','engineer')
-        definition['budget_eur']=88999
+        definition['budget_eur']=90999
         with patch('game.domain.economy.missions',return_value=[definition]):a.select_mission('flood-watch',s)
         self.assertFalse(next(c.passed for c in s.preview.checks if c.code=='budget'))
         with self.assertRaisesRegex(ValueError,'budget'):a.confirm(s,'sensor','engineer')

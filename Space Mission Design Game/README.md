@@ -1,14 +1,34 @@
 # Mission Forge - playable campaign
 
-## Latest update: adaptive stations, one-click collection and launch propellant
+## Custom Shift speed
+
+Press **Esc -> Settings / Run Speed** and drag the slider from **3 to 60 m/s** (maximum **20x walking speed**). Walking remains 3 m/s; crouching keeps its existing speed. **Reset / 5.4 m/s** restores the original sprint speed. Close Settings or choose **Save & Resume** to save your personal preference in ignored `runtime/player_settings.json`; it loads automatically on the next start and is independent of mission saves and other players. Collision substeps remain enabled at maximum speed.
+
+`python scripts/verify_sprint_settings.py` checks the rendered wide/narrow settings screen, actual 60 m/s Shift movement, normal walking, saved value, reset and thin-wall collision. It restores any existing personal settings afterwards.
+
+## Latest update: clearer navigation, fullscreen and direct launch
+
+The game starts **fullscreen**; **F11** toggles it and `python main.py --windowed` starts a resizable window. Dialog contents and click targets adapt together; opening a dialog hides the exploration HUD. **Shift** runs at 5.4 m/s instead of the normal 3 m/s, with collision checks preserved.
+
+There are **six fixed, separate benches**: Payload, Power, Communications, Orbit, Launcher and Fuel. Mission Planning contains the last three; the Fuel sign faces the central walkway. Room colors identify optics (cyan), energy (amber), communications (violet), planning (blue) and integration (green), with wall instructions naming the responsible role and next destination. Metal, solar-cell, foil and hazard textures are original procedural assets. Benches and carried stacks show recognizable cameras, solar arrays, dishes, orbit globes, rockets and propellant tanks with different shapes/colors.
+
+The persistent HUD counts **15 milestones** (mission + six picks + six placements + approval + result), names the next action/room/responsible player and shows destination distance plus a world marker. Workstation cards have larger white text, colored borders/current-choice emphasis, euro prices and projected trade-offs.
+
+**Readiness approval means host validation.** After placing 6/6 contributions, press **M** and use the gold **HOST: VALIDATE & APPROVE** button, or the marked Integration console. The host **or Flight** can choose Cached/Live and Targeted/Continuous, then press the green **LAUNCH NOW** from the tablet anywhere after approval. The preparing state explains that the trajectory is being calculated; playback starts automatically. Live mode still waits for GMAT on the host. Failed checks remain on the red Integration screen and block approval.
+
+**Solid costs EUR 2,000; Liquid costs EUR 5,000** (fictional teaching prices). The first-run recipe below now totals **EUR 91,000 / EUR 145,000**, with the same 120 MB success. Older bundled-fuel, duplicated-table, Flight-only/proximity-launch and EUR 89k instructions below are superseded.
+
+Verification: **62 automated tests** passed, including real TCP crews and a host launch from the spawn-room tablet. `python scripts/verify_clarity_upgrade.py` verifies fullscreen, six benches, sign orientation, sprint, price, approval, automatic launch and complete progress in a rendered successful run; `verify_workstation_upgrade.py` verifies resize/click alignment and previews. Evidence is ignored under `runtime/clarity-upgrade/`. No additional game dependencies; physical Wi-Fi laptops and Arch graphics remain manual acceptance. The two-page player guide and repository tracker are updated.
+
+## Previous update: adaptive stations, one-click collection and launch propellant
 
 Every workstation dialog now shows the same rotating spacecraft preview and the entire shared design's resource values, with **Show Checks** for all eight engineering checks. Teammate selections refresh an already-open preview without restarting its rotation; the full in-world spacecraft remains on the Integration table. Option buttons now **SELECT & PICK** in a single atomic action, including defaults; permissions, prerequisites and budget are checked before any selection changes.
 
 Panels and their hitboxes resize together across maximize/restore, landscape and narrow windows. Controls appear at initial spawn and on LAN spawn/join/reconnect; **Start Exploring** closes the welcome panel. The existing library retains its own reader layout and navigation.
 
-A separate **Launch Propellant** table is in Mission Planning, owned by the Flight role. Select **Solid** (included) or **Liquid** (EUR 5,000 extra) and submit its planning tablet alongside Orbit and Launcher: the crew now needs **6/6 contributions**. NASA's [Propulsion System](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/propulsion-system/) explains the real distinction; game prices are fictional, and this launch-plan choice does not change satellite mass, power or GMAT thrust. Old design saves default missing fuel to Solid and require fresh assembly/readiness.
+A separate **Launch Propellant** table is in Mission Planning, owned by the Flight role. Select **Solid** (EUR 2,000) or **Liquid** (EUR 5,000) and submit its planning tablet alongside Orbit and Launcher: the crew now needs **6/6 contributions**. NASA's [Propulsion System](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/propulsion-system/) explains the real distinction; game prices are fictional, and this launch-plan choice does not change satellite mass, power or GMAT thrust. Old design saves default missing fuel to Solid and require fresh assembly/readiness.
 
-The [two-page player guide](../output/pdf/mission-forge-player-guide.pdf) gives the tested first-run recipe and six explanations capped at two sentences each. Choose **Basic / Compact / Standard / Regional / Light / Solid**, then **Cached + Targeted**: the shipped assessment delivers 120 MB with no loss/unmet energy at EUR 89,000. Existing earlier five-choice or two-button instructions below are superseded by this update.
+The [two-page player guide](../output/pdf/mission-forge-player-guide.pdf) gives the tested first-run recipe and six explanations capped at two sentences each. Choose **Basic / Compact / Standard / Regional / Light / Solid**, then **Cached + Targeted**: the shipped assessment delivers 120 MB with no loss/unmet energy at EUR 91,000. Existing earlier five-choice or two-button instructions below are superseded by this update.
 
 Verification: **57 automated tests** pass; `scripts/verify_workstation_upgrade.py` checks visual-center button collisions after resize/action refresh, rotating previews, welcome controls, one-click collection and the actual successful mission. The four-client graphical test verifies that a remote choice updates an observer's already-open preview. Physical multi-laptop Wi-Fi and Arch graphics remain manual. PDF generation uses optional document tooling, not new game dependencies.
 

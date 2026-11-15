@@ -12,6 +12,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--smoke-seconds',type=float,default=0,help='Auto-close after rendering; 0 stays open')
     parser.add_argument('--engine-check',action='store_true',help='Run the original Phase 1 renderer scene')
+    parser.add_argument('--windowed',action='store_true',help='Use a resizable window instead of default fullscreen')
     args=parser.parse_args()
     if args.smoke_seconds<0: parser.error('--smoke-seconds must be non-negative')
     from panda3d.core import loadPrcFileData
@@ -23,7 +24,7 @@ def main():
     evidence_path=runtime/'graphics-smoke.json'
     evidence_path.unlink(missing_ok=True)
     app=Ursina(title='Mission Forge | '+('Engine Check' if args.engine_check else 'Mission Design'),
-               size=(1280,800),borderless=False,development_mode=False,editor_ui_enabled=False)
+               size=(1280,800) if args.windowed else None,fullscreen=not args.windowed,borderless=not args.windowed,development_mode=False,editor_ui_enabled=False)
     window.color=color.rgb32(6,12,25)
     window.fps_counter.enabled=False
     window.exit_button.enabled=False
@@ -48,7 +49,10 @@ def main():
         experience.tick(time.dt)
         if args.smoke_seconds and state['elapsed']>=args.smoke_seconds: application.quit()
     sys.modules['__main__'].update=update
-    sys.modules['__main__'].input=experience.handle_input
+    def handle_input(key):
+        if key=='f11':window.fullscreen=not window.fullscreen;return
+        experience.handle_input(key)
+    sys.modules['__main__'].input=handle_input
     def finish():
         if hasattr(experience,'network'):
             if experience.network.client:experience.network.client.close()

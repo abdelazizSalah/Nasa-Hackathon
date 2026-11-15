@@ -21,17 +21,17 @@ class Pose:
     yaw: float = 0
 
 
-def advance(pose, forward, turn, dt, obstacles, frozen=False, strafe=0):
+def advance(pose, forward, turn, dt, obstacles, frozen=False, strafe=0, speed=3):
     if frozen:
         return pose
     dt = max(0, min(dt, .1))  # Prevent jumps when focus/graphics stall.
     yaw = (pose.yaw + turn * 75 * dt) % 360
     length = max(1, math.hypot(forward, strafe))
     forward, strafe = forward / length, strafe / length
-    amount = math.hypot(forward, strafe) * 3 * dt
+    amount = math.hypot(forward, strafe) * speed * dt
     steps = max(1, math.ceil(abs(amount) / .08))
-    dx = (math.sin(math.radians(yaw))*forward + math.cos(math.radians(yaw))*strafe) * 3 * dt / steps
-    dz = (math.cos(math.radians(yaw))*forward - math.sin(math.radians(yaw))*strafe) * 3 * dt / steps
+    dx = (math.sin(math.radians(yaw))*forward + math.cos(math.radians(yaw))*strafe) * speed * dt / steps
+    dz = (math.cos(math.radians(yaw))*forward - math.sin(math.radians(yaw))*strafe) * speed * dt / steps
     x, z = pose.x, pose.z
     for _ in range(steps):
         if not any(item.contains(x + dx, z) for item in obstacles):

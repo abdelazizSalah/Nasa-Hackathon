@@ -15,7 +15,7 @@ CYAN=color.rgb32(64,216,222)
 
 class Crew:
     def __init__(self,hub):
-        self.hub=hub; self.server=None; self.client=None; self.role=None; self.busy=False
+        self.hub=hub; self.server=None; self.client=None; self.role=None; self.busy=False;self.preparing=False
         self.avatars={}; self.players={}; self.timer=0.; self.seen_flight=0; self.revision=-1
         self.message='Solo / N: play together on Wi-Fi'; self.code=''; self.port=8765
         self.status=Text(self.message,parent=hub.hud,position=(-.76,.386),scale=.55,color=CYAN)
@@ -73,7 +73,7 @@ class Crew:
         if self.hub.mission.flight is not None:self.hub.mission.finish_flight()
         if self.client:self.client.close()
         if self.server:self.server.stop()
-        self.client=None; self.server=None; self.role=None; self.busy=False
+        self.client=None; self.server=None; self.role=None; self.busy=False;self.preparing=False
         self.hub.design_session.history=[]
         self.revision=-1; self.seen_flight=0; self.code=''
         for avatar in self.avatars.values():destroy(avatar)
@@ -155,7 +155,7 @@ class Crew:
         if changed:s._apply(design,'Crew selection updated by the host.'); h.spacecraft.apply(design); h.refresh_resources()
         c=h.mission.campaign; c.stage=data['stage']; c.approved=data['approved']
         c.last_result=data['last_result']; c.previous_result=data['previous_result']
-        h.read_cards=set(data['cards']); h.mission.mode=data['mode']; h.mission.targeted=data['targeted']; self.busy=data['busy']
+        h.read_cards=set(data['cards']); h.mission.mode=data['mode']; h.mission.targeted=data['targeted']; self.busy=data['busy'];self.preparing=data['busy'] and data['result'] is None
         h.facility.refresh_modal()
         if h.modal=='design':h.design_panel.refresh()
         elif h.modal=='mission':h.mission.open()

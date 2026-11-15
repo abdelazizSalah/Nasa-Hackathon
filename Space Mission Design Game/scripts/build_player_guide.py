@@ -47,7 +47,7 @@ def build():
     y=text('FLOOD WATCH',44,y,size=12,bold=True,color=CYAN)-8
     y=text('1. Close the welcome instructions. For co-op, press <b>N</b> and connect everyone first; the host selects <b>Flood Watch</b> at the Earth display.',44,y)-12
     choices=[('1 / Payload','BASIC','EUR 15,000'),('2 / Power','COMPACT','EUR 18,000'),('3 / Communications','STANDARD','EUR 10,000'),
-             ('4 / Orbit','REGIONAL','EUR 8,000 ground service'),('5 / Launcher','LIGHT','EUR 18,000'),('6 / Fuel table','SOLID','Included / EUR 0 extra')]
+             ('4 / Orbit','REGIONAL','EUR 8,000 ground service'),('5 / Launcher','LIGHT','EUR 18,000'),('6 / Fuel table','SOLID','EUR 2,000')]
     for row in range(3):
         for col in range(2):
             title,choice,price=choices[row*2+col];x=44+col*259
@@ -57,12 +57,12 @@ def build():
             text(price,x+12,y-49,width=222,size=9,color=CYAN)
         y-=82
     y-=1
-    y=text('2. Walk through the Library\'s right-hand doorway. At each assigned table press <b>E</b>, then click <b>SELECT &amp; PICK</b> once; choose Orbit and Launcher in Mission Planning, then visit the separate Fuel table.',44,y)-11
+    y=text('2. Walk through the Library\'s right-hand doorway. At each assigned table press <b>E</b>, then click <b>SELECT &amp; PICK</b> once; Mission Planning has separate <b>Orbit, Launcher and Fuel</b> benches.',44,y)-11
     y=text('3. At Integration, use <b>E</b> to place Sensor, Power and Radio. At the Mission Plan desk submit <b>Orbit, Launcher and Fuel</b>; left/right chooses a plan and E places it.',44,y)-11
-    y=text('4. The host runs <b>Validation</b> after all <b>6/6</b> contributions are placed. The Flight engineer then approaches Launch Readiness, selects <b>CACHED</b> and <b>TARGETED</b>, and clicks <b>LAUNCH &amp; OPERATE</b>.',44,y)-15
+    y=text('4. After placing <b>6/6</b> contributions, press <b>M</b>: the host clicks the gold <b>VALIDATE &amp; APPROVE</b> button. Host or Flight selects <b>CACHED + TARGETED</b>, then the green <b>LAUNCH NOW</b>; preparation and playback start automatically.',44,y)-15
     c.setFillColor(NAVY);c.roundRect(44,y-79,507,79,6,fill=1,stroke=0)
     text('EXPECTED RESULT',56,y-10,size=10,color=HexColor('#68DDDE'),bold=True)
-    text('<b>EUR 89,000 / EUR 145,000</b> budget; 57 / 70 kg; +8 W peak-power margin.<br/><b>120 MB delivered</b> against the 60 MB goal; zero storage loss and zero unmet energy.',56,y-29,width=480,size=10.5,leading=15,color=HexColor('#FFFFFF'))
+    text('<b>EUR 91,000 / EUR 145,000</b> budget; 57 / 70 kg; +8 W peak-power margin.<br/><b>120 MB delivered</b> against the 60 MB goal; zero storage loss and zero unmet energy.',56,y-29,width=480,size=10.5,leading=15,color=HexColor('#FFFFFF'))
     y-=95
     text('<b>Avoid:</b> Continuous imaging, Wide orbit, or an Advanced sensor on this first run. Preview-cycle data (300 MB here) differs from the trajectory-driven mission result; changing a choice requires recollection, resubmission and fresh approval.',44,y,size=9.4,leading=12,color=MUTED)
     c.showPage()
@@ -80,7 +80,7 @@ def build():
       ('LAUNCHER / GET THE SPACECRAFT TO ITS ORBIT',
        '<b>Light:</b> EUR 18k, 70 kg capacity, Regional only; <b>Heavy:</b> EUR 30k, 100 kg, either orbit. A launcher carries the complete spacecraft, so extra capacity and orbit compatibility consume budget instead of improving the sensor.'),
       ('FUEL TABLE / LAUNCH PROPELLANT, NOT SATELLITE FUEL',
-       '<b>Solid:</b> included, premixed fuel/oxidizer and usually burns to completion; <b>Liquid:</b> EUR 5k extra, separate propellant feed systems with flow control. Liquid systems add hardware/operating complexity, and throttle or restart capability depends on engine design [1, 2].')]
+       '<b>Solid:</b> EUR 2k, premixed fuel/oxidizer and usually burns to completion; <b>Liquid:</b> EUR 5k, separate propellant feed systems with flow control. Liquid systems add hardware/operating complexity, and throttle or restart capability depends on engine design [1, 2].')]
     y=H-174
     for title,body in sections:
         y=text(title,44,y,size=10.3,leading=13,color=CYAN,bold=True)-5
