@@ -1,0 +1,31 @@
+name: Build Mission Forge
+on:
+  workflow_dispatch:
+jobs:
+  package:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: ubuntu-22.04
+            platform: linux
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: Space Mission Design Game
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements-build.txt
+      - run: python scripts/build_executable.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MissionForge-${{ matrix.platform }}
+          path: |
+            play/${{ matrix.platform }}/*
+            play/licenses/**
+            play/README.md
+          retention-days: 14

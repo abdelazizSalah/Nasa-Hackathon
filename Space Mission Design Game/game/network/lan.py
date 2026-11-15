@@ -19,7 +19,7 @@ from game.orbit.provider import trajectory
 
 MAX_PACKET=1024*1024
 HEARTBEAT_SECONDS=2
-ROOT=Path(__file__).resolve().parents[2]
+from game.paths import ROOT,RUNTIME
 
 def fingerprint():
     content=json.dumps(json.loads((ROOT/'content/design_catalog.json').read_text(encoding='utf-8')),sort_keys=True)
@@ -56,7 +56,7 @@ class Room:
         self.mode='cached'; self.targeted=True; self.revision=0; self.flight_id=0; self.result=None
         self.busy=False; self.awaiting=set(); self.generation=0
         self.door_open=False
-        self.save_path=ROOT/'runtime/crew-save.json'
+        self.save_path=RUNTIME/'crew-save.json'
         self.pool=ThreadPoolExecutor(max_workers=1)
 
     def state(self):

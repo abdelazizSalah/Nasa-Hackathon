@@ -7,7 +7,7 @@ import textwrap
 from urllib.parse import urlsplit
 import webbrowser
 
-ROOT=Path(__file__).resolve().parents[2]
+from game.paths import ROOT,RUNTIME
 DATA=ROOT/'content/library'
 LINE_WIDTH=53
 PAGE_LINES=20
@@ -91,7 +91,7 @@ class ReferenceOpener:
 
 class ReadingPosition:
     def __init__(self,path=None):
-        self.path=Path(path) if path else ROOT/'runtime/library-reading.json'
+        self.path=Path(path) if path else RUNTIME/'library-reading.json'
         try:
             data=json.loads(self.path.read_text(encoding='utf-8'))
             self.positions=data.get('positions',{}) if data.get('schema_version')==1 else {}

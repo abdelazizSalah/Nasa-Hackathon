@@ -3,15 +3,17 @@ import json
 import os
 from pathlib import Path
 import shutil
+import sys
 
-ROOT = Path(__file__).resolve().parents[1]
-RUNTIME = ROOT / 'runtime'
+if not getattr(sys,"frozen",False):sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+
+from game.paths import ROOT,RUNTIME,CONFIG_PATH
 
 
 def gmat_executable(override=None):
     raw = override or os.environ.get('GMAT_BIN')
-    if not raw and (ROOT / 'local_config.json').exists():
-        raw = json.loads((ROOT / 'local_config.json').read_text(encoding='utf-8'))['gmat_bin']
+    if not raw and CONFIG_PATH.exists():
+        raw = json.loads(CONFIG_PATH.read_text(encoding='utf-8'))['gmat_bin']
     names = ('GmatConsole.exe',) if os.name == 'nt' else ('GmatConsole', 'GMATConsole')
     if raw:
         path = Path(raw).expanduser().resolve()

@@ -13,14 +13,20 @@ def main():
     parser.add_argument('--smoke-seconds',type=float,default=0,help='Auto-close after rendering; 0 stays open')
     parser.add_argument('--engine-check',action='store_true',help='Run the original Phase 1 renderer scene')
     parser.add_argument('--windowed',action='store_true',help='Use a resizable window instead of default fullscreen')
+    parser.add_argument('--verify-package',action='store_true',help='Check bundled assets, cached mission and 2/3/4-player local TCP, then render briefly')
     args=parser.parse_args()
     if args.smoke_seconds<0: parser.error('--smoke-seconds must be non-negative')
     from panda3d.core import loadPrcFileData
-    loadPrcFileData('', 'audio-library-name null\nnotify-level-device error')
+    loadPrcFileData('', 'load-display pandagl\naudio-library-name null\nnotify-level-device error')
     from ursina import Ursina, color, application, time, window, held_keys
-    root=Path(__file__).resolve().parent
-    runtime=root/'runtime'
-    runtime.mkdir(exist_ok=True)
+    from game.paths import ROOT as root,RUNTIME as runtime
+    runtime.mkdir(parents=True,exist_ok=True)
+    if args.verify_package:
+        from game.package_check import verify
+        verify()
+        if not args.smoke_seconds:args.smoke_seconds=3
+    # Resolve engine assets independently of the caller's working directory.
+    application.asset_folder=root
     evidence_path=runtime/'graphics-smoke.json'
     evidence_path.unlink(missing_ok=True)
     app=Ursina(title='Mission Forge | '+('Engine Check' if args.engine_check else 'Mission Design'),
@@ -59,11 +65,15 @@ def main():
             if experience.network.server:experience.network.server.stop()
         if state['frames']<2: return
         gsg=app.win.get_gsg()
+        if args.verify_package:
+            from panda3d.core import Filename
+            app.win.save_screenshot(Filename.from_os_specific(str(runtime/'package-smoke.png')))
         evidence_path.write_text(json.dumps({
             'utc':datetime.now(timezone.utc).isoformat(),'os':platform.platform(),
             'python':platform.python_version(),'ursina':version('ursina'),
             'renderer':gsg.get_driver_renderer(),'vendor':gsg.get_driver_vendor(),
             'frames':state['frames'],'elapsed_seconds':state['elapsed'],
+            'fullscreen':bool(window.fullscreen),'window_size':list(app.win.get_size()),
             'status':'rendered','user_acceptance':'pending',**experience.evidence(),
         },indent=2),encoding='utf-8')
     try: app.run()

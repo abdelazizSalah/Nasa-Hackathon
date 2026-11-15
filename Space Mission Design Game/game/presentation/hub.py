@@ -21,7 +21,7 @@ from game.domain.economy import eur
 from game.presentation.spacecraft import Spacecraft
 from game.presentation.design_panel import DesignPanel
 
-ROOT = Path(__file__).resolve().parents[2]
+from game.paths import ROOT,RUNTIME
 CYAN = color.rgb32(64, 216, 222)
 WHITE = color.rgb32(226, 237, 246)
 MUTED = color.rgb32(151, 176, 198)
@@ -32,7 +32,7 @@ AMBER = color.rgb32(255, 190, 89)
 class Hub:
     def __init__(self):
         self.cards = json.loads((ROOT / 'content/learning_cards.json').read_text(encoding='utf-8'))['cards']
-        self.settings_path=ROOT/'runtime/player_settings.json'
+        self.settings_path=RUNTIME/'player_settings.json'
         self.sprint_speed=5.4
         try:
             value=float(json.loads(self.settings_path.read_text(encoding='utf-8'))['sprint_speed'])

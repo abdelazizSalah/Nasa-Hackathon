@@ -1,5 +1,13 @@
 # Mission Forge - playable campaign
 
+## Play without installing Python
+
+Windows users can open **`play/windows/MissionForge.exe` at repository root** after cloning or extracting the repo ZIP. Read [the player startup README](../play/README.md) for controls, saves, LAN play, optional Live GMAT and Linux/native builds. Cached mode requires neither GMAT nor internet. The executable includes all dependencies/assets and opens fullscreen.
+
+[The complete six-page handbook](../output/pdf/mission-forge-complete-handbook.pdf) explains every table/choice, numerical trade-offs, constraints, units, telemetry and the successful run. It distinguishes GMAT position data from game-calculated resources and explains the 60 MB goal versus the 120 MB Targeted cap.
+
+Maintainers: install `requirements-build.txt`, run `python scripts/build_executable.py`, then test `../play/windows/MissionForge.exe --verify-package`. The Windows binary was verified at 1920x1080 with OpenGL, bundled books/materials, cached science success and real localhost full 2/3/4-player missions. Linux binary builds have a manual GitHub Actions workflow; native Arch acceptance remains pending. Rebuild and commit the binary/checksum with source updates so cloned copies stay synchronized.
+
 ## Earth and object materials (2026-11-15)
 
 The entry Earth, orbit-table globes and operations Earth use bundled NASA Blue Marble imagery. The large globes have smooth geometry, a separate NASA cloud layer, soft atmosphere and directional lighting. Rooms, doors, benches, equipment, spacecraft previews, carried parts and remote suits now have metal panels, deck plate, foil, solar cells, ceramic, rubber, fabric and optical-glass materials. Existing books already keep their authored cover textures; readable UI, glowing markers and lights retain their display styling.

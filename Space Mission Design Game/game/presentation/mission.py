@@ -16,7 +16,7 @@ from ursina.shaders import basic_lighting_shader
 from game.presentation.materials import surface
 from game.presentation.planet import earth
 
-ROOT=Path(__file__).resolve().parents[2]
+from game.paths import ROOT,RUNTIME
 CYAN=color.rgb32(64,216,222); AMBER=color.rgb32(255,190,89)
 
 class MissionUI:
@@ -29,7 +29,7 @@ class MissionUI:
         self.hub=hub; self.campaign=Campaign(); self.pool=ThreadPoolExecutor(max_workers=1)
         self.future=None; self.mode='cached'; self.targeted=True; self.flight=None
         self.message='Deliver at least 60 MB of useful flood observations. Keep power and storage healthy.'
-        self.save_path=ROOT/'runtime/campaign.json'
+        self.save_path=RUNTIME/'campaign.json'
 
     def open(self):
         h=self.hub
@@ -215,7 +215,7 @@ class MissionUI:
         else:
             c.previous_result=c.last_result; c.last_result=summary
             if result['passed']: c.stage=5
-        (ROOT/'runtime/mission-report.json').write_text(json.dumps(summary,indent=2))
+        (RUNTIME/'mission-report.json').write_text(json.dumps(summary,indent=2))
         h=self.hub
         if h.panel: h.close_panel()
         h.panel_base('report','MISSION SUCCESS' if result['passed'] else 'MISSION NEEDS REVISION',result['provenance'])

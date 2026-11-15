@@ -7,7 +7,7 @@ import subprocess
 import sys
 import tempfile
 
-ROOT=Path(__file__).resolve().parents[2]
+from game.paths import ROOT,RUNTIME
 sys.path.insert(0,str(ROOT/'scripts'))
 from common import gmat_executable
 from gmat_smoke import prepare_startup
@@ -50,8 +50,9 @@ def trajectory(preset,live=True):
         if not sma-30<math.sqrt(sum(v*v for v in row[2:5]))<sma+30: raise ValueError('Invalid orbit radius')
     data={'inputs':inputs,'input_hash':key,'rows':rows,'source':'Live GMAT console R2026a',
           'units':'elapsed s, A1ModJulian, XYZ km, velocity km/s','script_sha256':hashlib.sha256(text.encode()).hexdigest()}
+    cache=ensure_runtime()/'orbit_cache'/f'{preset}.json'
     cache.parent.mkdir(exist_ok=True); cache.write_text(json.dumps(data),encoding='utf-8')
     return rows,'Live GMAT R2026a',data
 
 def ensure_runtime():
-    path=ROOT/'runtime'; path.mkdir(exist_ok=True); return path
+    RUNTIME.mkdir(parents=True,exist_ok=True); return RUNTIME
