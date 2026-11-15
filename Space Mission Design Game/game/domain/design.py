@@ -15,6 +15,7 @@ class Design:
     radio: str = 'standard'
     orbit: str = 'regional'
     launcher: str = 'light'
+    fuel: str = 'solid'
 
 
 @dataclass(frozen=True)
@@ -67,7 +68,7 @@ def evaluate(catalog, design):
     hardware = (sensor, power, radio)
     mass = scenario['baseline_mass_kg'] + sum(item['mass_kg'] for item in hardware)
     cost = (scenario['baseline_cost_eur'] + sum(item['cost_eur'] for item in hardware)
-            + launcher['cost_eur'] + orbit['ground_cost_eur'])
+            + launcher['cost_eur'] + orbit['ground_cost_eur'] + choice['fuel']['cost_eur'])
     peak = scenario['baseline_power_w'] + sensor['power_w'] + radio['power_w']
     battery = power['battery_wh']
     min_battery = battery

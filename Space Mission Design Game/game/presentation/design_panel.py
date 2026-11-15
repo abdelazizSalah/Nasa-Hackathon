@@ -33,7 +33,7 @@ class DesignPanel:
         session=self.session
         values=session.preview.values
         for i,category in enumerate(session.catalog['categories']):
-            y=.245-i*.091
+            y=.245-i*.075
             locked=self.network is not None and not self.network.owned(category['id'])
             self.text(('> ' if self.row==i else '  ')+category['label'].upper()+(' / TEAMMATE' if locked else ''),-.675,y,.60,AMBER if self.row==i else MUTED)
             for j,option in enumerate(category['options']):

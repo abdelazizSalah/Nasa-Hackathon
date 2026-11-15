@@ -26,7 +26,7 @@ def check(value,message):assert value,message;checks.append(message)
 f.action('mission',mission='flood-watch');close()
 for c in CATEGORIES:f.action('confirm',category=c)
 h.tick(0);view(68,9.5);shot('01-five-parts-stack')
-check(len(f.local_hand.held_parts)==5,'All five owned choices are visible in one vertical stack')
+check(len(f.local_hand.held_parts)==len(CATEGORIES),'All six owned choices are visible in one vertical stack')
 check(all(a.y<b.y for a,b in zip(f.local_hand.held_parts,f.local_hand.held_parts[1:])),'Carried parts occupy increasing, separate heights')
 for c in CATEGORIES:
     x,z=integration_target(c);view(x,z-1);f.action('submit',category=c)

@@ -14,7 +14,7 @@ class EuroBudgetTests(TestCase):
         self.assertEqual(mission['currency'],'EUR')
         for category in catalog['categories']:
             for option in category['options']:
-                self.assertGreater(option.get('cost_eur',option.get('ground_cost_eur',0)),0)
+                self.assertGreaterEqual(option.get('cost_eur',option.get('ground_cost_eur',0)),0)
         self.assertEqual(evaluate(catalog,Design()).values['cost_eur'],89000)
         costly=evaluate(catalog,Design('advanced','extended','fast','wide','heavy'))
         self.assertEqual(costly.values['cost_eur'],148000)
@@ -38,7 +38,7 @@ class EuroBudgetTests(TestCase):
         for c in CATEGORIES:a.confirm(s,c,'engineer');a.submit(s,c,'engineer',['engineer'])
         self.assertTrue(a.validate(s,['engineer']))
         a.remove(s,'sensor','engineer',['engineer'])
-        self.assertEqual(len(a.submitted),4);self.assertEqual(a.inventory(s,'engineer',['engineer']),['sensor'])
+        self.assertEqual(len(a.submitted),len(CATEGORIES)-1);self.assertEqual(a.inventory(s,'engineer',['engineer']),['sensor'])
         self.assertFalse(a.ready(s));self.assertIsNone(a.approved)
         with self.assertRaises(ValueError):a.remove(s,'sensor','engineer',['engineer'])
         a.submit(s,'sensor','engineer',['engineer']);self.assertTrue(a.validate(s,['engineer']))
@@ -55,4 +55,4 @@ class RetrievalNetworkTests(TestCase):
         helper.act(host,'pose',x=70,z=7,yaw=0);helper.act(host,'remove',category='sensor')
         state=helper.state(friend,lambda d:'sensor' not in d['assembly']['submitted'])
         self.assertFalse(state['assembly']['ready']);self.assertEqual(state['stage'],1)
-        self.assertIn('sensor',state['assembly']['inventory']['engineer']);self.assertEqual(len(state['assembly']['submitted']),4)
+        self.assertIn('sensor',state['assembly']['inventory']['engineer']);self.assertEqual(len(state['assembly']['submitted']),len(CATEGORIES)-1)

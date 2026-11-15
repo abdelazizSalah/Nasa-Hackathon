@@ -39,7 +39,7 @@ class AssemblyTests(unittest.TestCase):
     def test_correction_preserves_unaffected_submissions_and_requires_resubmission(self):
         a,s=self.integrated();a.validate(s,PLAYER_IDS[:1])
         s.choose('sensor','advanced');a.changed(s)
-        self.assertNotIn('sensor',a.submitted);self.assertEqual(len(a.submitted),4);self.assertFalse(a.ready(s))
+        self.assertNotIn('sensor',a.submitted);self.assertEqual(len(a.submitted),len(CATEGORIES)-1);self.assertFalse(a.ready(s))
         a.confirm(s,'sensor','engineer');a.submit(s,'sensor','engineer',PLAYER_IDS[:1])
         self.assertFalse(a.validate(s,PLAYER_IDS[:1]))
         self.assertTrue(any(not r['passed'] for r in a.validation))

@@ -24,7 +24,7 @@ class FourPlayerTests(unittest.TestCase):
             player=next(p for p in clients if category in owned(p,clients));c=clients[player]
             x,z=station_position(category,player,clients)
             self.act(c,'pose',x=x,z=z-1,yaw=0)
-            self.act(c,'confirm',category=category)
+            self.act(c,'collect',category=category,option=getattr(server.room.session.design,category))
             self.state(c,lambda d:category in d['assembly']['confirmed'])
             x,z=integration_target(category);self.act(c,'pose',x=x,z=z-1,yaw=0)
             self.act(c,'submit',category=category)
@@ -36,7 +36,7 @@ class FourPlayerTests(unittest.TestCase):
         for n in range(1,5):
             with self.subTest(n=n):
                 server,clients=self.crew(n);state=self.prepare(server,clients)
-                self.assertEqual(state['stage'],4);self.assertEqual(len(state['assembly']['submitted']),5)
+                self.assertEqual(state['stage'],4);self.assertEqual(len(state['assembly']['submitted']),len(CATEGORIES))
                 for p,c in clients.items():
                     remote=self.state(c,lambda d:d['assembly']['ready']) if p!='engineer' else state
                     self.assertEqual(remote['assembly']['approved'],state['design'])

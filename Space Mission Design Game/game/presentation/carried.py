@@ -11,9 +11,9 @@ class Part(Entity):
     def __init__(self,category,design,**kwargs):
         super().__init__(**kwargs)
         self.category=category
-        if category in ('orbit','launcher'):
+        if category in ('orbit','launcher','fuel'):
             Entity(parent=self,model='cube',scale=(.8,.12,.6),color=color.rgb32(33,94,117))
-            Text(('ORBIT' if category=='orbit' else 'LAUNCH')+' PLAN',parent=self,position=(-.33,.08,-.27),rotation_x=90,scale=1.1,color=color.cyan)
+            Text(('ORBIT' if category=='orbit' else 'FUEL: '+design.fuel.upper() if category=='fuel' else 'LAUNCH')+' PLAN',parent=self,position=(-.33,.08,-.27),rotation_x=90,scale=1.1,color=color.cyan)
         else:
             craft=Spacecraft(self);craft.apply(design);craft.root.rotation=(0,0,0)
             for child in craft.root.children:child.enabled=False
@@ -35,7 +35,7 @@ def set_carried(parent,categories,design,local=False):
         parent.held_part=Entity(parent=parent,position=(.43,-.30,.9) if local else (.45,.74,.28))
         size=.17 if local else .35
         heights={'sensor':.52 if design.sensor=='advanced' else .35,'power':.045,
-                 'radio':.16 if design.radio=='fast' else .12,'orbit':.12,'launcher':.12}
+                 'radio':.16 if design.radio=='fast' else .12,'orbit':.12,'launcher':.12,'fuel':.12}
         y=0;previous_height=None
         for i,category in enumerate(categories):
             height=heights[category]*size

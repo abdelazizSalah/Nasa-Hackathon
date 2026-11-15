@@ -33,6 +33,7 @@ def main():
     else:
         from game.presentation.hub import Hub
         experience=Hub()
+        experience.show_spawn_instructions()
     state={'elapsed':0.,'frames':0}
     def update():
         state['elapsed']+=time.dt

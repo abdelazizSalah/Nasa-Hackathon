@@ -1,5 +1,17 @@
 # Mission Forge - playable campaign
 
+## Latest update: adaptive stations, one-click collection and launch propellant
+
+Every workstation dialog now shows the same rotating spacecraft preview and the entire shared design's resource values, with **Show Checks** for all eight engineering checks. Teammate selections refresh an already-open preview without restarting its rotation; the full in-world spacecraft remains on the Integration table. Option buttons now **SELECT & PICK** in a single atomic action, including defaults; permissions, prerequisites and budget are checked before any selection changes.
+
+Panels and their hitboxes resize together across maximize/restore, landscape and narrow windows. Controls appear at initial spawn and on LAN spawn/join/reconnect; **Start Exploring** closes the welcome panel. The existing library retains its own reader layout and navigation.
+
+A separate **Launch Propellant** table is in Mission Planning, owned by the Flight role. Select **Solid** (included) or **Liquid** (EUR 5,000 extra) and submit its planning tablet alongside Orbit and Launcher: the crew now needs **6/6 contributions**. NASA's [Propulsion System](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/propulsion-system/) explains the real distinction; game prices are fictional, and this launch-plan choice does not change satellite mass, power or GMAT thrust. Old design saves default missing fuel to Solid and require fresh assembly/readiness.
+
+The [two-page player guide](../output/pdf/mission-forge-player-guide.pdf) gives the tested first-run recipe and six explanations capped at two sentences each. Choose **Basic / Compact / Standard / Regional / Light / Solid**, then **Cached + Targeted**: the shipped assessment delivers 120 MB with no loss/unmet energy at EUR 89,000. Existing earlier five-choice or two-button instructions below are superseded by this update.
+
+Verification: **57 automated tests** pass; `scripts/verify_workstation_upgrade.py` checks visual-center button collisions after resize/action refresh, rotating previews, welcome controls, one-click collection and the actual successful mission. The four-client graphical test verifies that a remote choice updates an observer's already-open preview. Physical multi-laptop Wi-Fi and Arch graphics remain manual. PDF generation uses optional document tooling, not new game dependencies.
+
 ## Mouse look
 
 Move the mouse to look up/down/left/right while exploring. The cursor is captured for continuous turning; pitch stops before the view flips upside down. W/S walk, A/D strafe and left/right arrows remain optional keyboard turning. Escape opens pause and releases the cursor. Books, consoles and menus also release it automatically; closing them resumes mouse look. Focus loss releases capture, and returning skips recenter motion. This supersedes older statements that the mouse never turns the camera.

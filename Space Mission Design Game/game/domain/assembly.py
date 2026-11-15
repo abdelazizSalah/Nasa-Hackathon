@@ -7,7 +7,7 @@ ROLES={
     'science':('Science & Payload',('sensor',)),
     'power':('Power & Spacecraft Systems',('power',)),
     'communications':('Communications & Data',('radio',)),
-    'flight':('Mission & Flight Dynamics',('orbit','launcher')),
+    'flight':('Mission & Flight Dynamics',('orbit','launcher','fuel')),
 }
 CATEGORIES=tuple(c for _,categories in ROLES.values() for c in categories)
 PLAYER_IDS=('engineer','operations','crew3','crew4')
@@ -61,17 +61,35 @@ class Assembly:
         if self.mission!=mission or budget_changed:self.approved=None;self.validation=[]
         self.mission=mission
 
-    def confirm(self,session,category,player):
+    def check_collection(self,session,category,design=None):
+        from game.domain.design import evaluate
+        design=design or session.design
         if self.mission is None:raise ValueError('Select Flood Watch in the spawn room first.')
         if category not in CATEGORIES:raise ValueError('Unknown component category.')
-        stages=(('sensor',),('power',),('radio',),('orbit','launcher'))
+        stages=(('sensor',),('power',),('radio',),('orbit','launcher'),('fuel',))
         stage=next(i for i,cs in enumerate(stages) if category in cs)
-        if any(self.confirmed.get(c)!=getattr(session.design,c) for cs in stages[:stage] for c in cs):
-            raise ValueError('Complete the earlier workshops first: payload, power, communications, then mission planning.')
-        if not next(c.passed for c in session.preview.checks if c.code=='budget'):
+        if any(self.confirmed.get(c)!=getattr(design,c) for cs in stages[:stage] for c in cs):
+            raise ValueError('Complete earlier tables first: payload, power, communications, mission planning, then launch propellant.')
+        if not next(c.passed for c in evaluate(session.catalog,design).checks if c.code=='budget'):
             raise ValueError('Over mission budget. Reduce the total euro cost before collecting parts.')
+
+    def confirm(self,session,category,player):
+        self.check_collection(session,category)
         self.confirmed[category]=getattr(session.design,category)
         self.carried[player]=category
+
+    def collect(self,session,category,option,player,players):
+        from dataclasses import replace
+        if category not in owned(player,players):raise ValueError('That subsystem belongs to your teammate.')
+        cat=next(c for c in session.catalog['categories'] if c['id']==category)
+        if not any(o['id']==option for o in cat['options']):raise ValueError('Unknown component option.')
+        candidate=replace(session.design,**{category:option})
+        self.check_collection(session,category,candidate)  # Reject before changing any shared state.
+        changed=session.choose(category,option)
+        if changed:self.changed(session)
+        self.submitted.pop(category,None);self.approved=None;self.validation=[]
+        self.confirmed[category]=option;self.carried[player]=category
+        return changed
 
     def changed(self,session):
         for category in list(self.confirmed):
@@ -107,7 +125,7 @@ class Assembly:
         return self.mission is not None and all(self.submitted.get(c,{}).get('option')==getattr(session.design,c) for c in CATEGORIES)
 
     def validate(self,session,players):
-        if not self.complete(session):raise ValueError('Submit all five choices: payload, power, radio, orbit and launcher plan.')
+        if not self.complete(session):raise ValueError('Submit all six choices: payload, power, radio, orbit, launcher and launch propellant.')
         self.validation=feedback(session,players)
         self.approved=asdict(session.design) if session.preview.passed else None
         return self.approved is not None

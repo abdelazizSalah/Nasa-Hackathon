@@ -54,7 +54,14 @@ try:
     for category in CATEGORIES:
         owner=next(p for p in net.players if category in owned(p,net.players))
         x,z=station_position(category,owner,net.players);move(owner,x,z-1)
-        send(owner,'confirm',category=category);wait(lambda:category in h.facility.state['confirmed'])
+        send(owner,'collect',category=category,option=getattr(h.design_session.design,category));wait(lambda:category in h.facility.state['confirmed'])
+    h.facility.open_station('sensor','engineer')
+    x,z=station_position('power','operations',net.players);move('operations',x,z-1)
+    send('operations','collect',category='power',option='extended')
+    wait(lambda:h.design_session.design.power=='extended')
+    assert h.facility.preview.arrays[0][1].scale_x>1
+    shot('17-live-observer-preview');h.close_panel()
+    checks.append('teammate selection updates an already-open rotating workstation preview')
     wait(lambda:len(net.avatars)==3)
     for i,p in enumerate(clients):move(p,70+i*2,7,y=.6 if i==0 else 0,crouch=i==1)
     move('engineer',72,3.9);h._sync_camera()
@@ -73,7 +80,7 @@ try:
     # Revision preserves unrelated submissions and removes exactly the changed payload.
     net.send('choose',category='sensor',option='advanced')
     wait(lambda:not h.facility.state['ready'] and 'sensor' not in h.facility.state['submitted'])
-    assert len(h.facility.state['submitted'])==4
+    assert len(h.facility.state['submitted'])==len(CATEGORIES)-1
     checks.append('selection changes invalidate approval and only affected submission')
     # Disconnect while integration is incomplete; surviving crew retain all choices.
     clients['crew3'].close();clients.pop('crew3');poses.pop('crew3')

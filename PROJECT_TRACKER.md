@@ -12,6 +12,8 @@ LATEST REVISION (2026-11-14): E retrieves/resubmits owned integration parts and 
 
 LATEST CONTROLS UPDATE: Mouse displacement now controls yaw and pitch during exploration; vertical look is clamped to +/-85 degrees. Existing W/S walking, A/D strafing and optional arrow turning remain. Books/menus release capture and freeze look; closing resumes capture with stale/recenter motion suppressed. Alt-Tab also releases safely. Two unit tests and the scripted graphical mouse-look harness pass; run scripts/verify_mouse_look.py. No mission/engineering/network changes in this update.
 
+LATEST WORKSTATION UPDATE (2026-11-15): Shared ResponsivePanel scales all modal contents and hitboxes after resize/rebuild. Each E-opened workstation reuses the rotating Spacecraft model, with full shared resource metrics and a checks view; remote updates preserve the preview's rotation phase. SELECT & PICK is one atomic server-validated selection/collection. Main launch and LAN spawn/join show welcome controls. Added a Flight-owned Launch Propellant table in Mission Planning (Solid included / Liquid +EUR 5k), NASA-sourced and explicitly launch-plan-only, without invented thrust or bus-mass changes. Six contributions now required; old saves default fuel to Solid and need fresh approval. Verified 57 tests, resize/hitbox + one-click + successful Cached/Targeted graphical flow, four-client live observer preview, and existing facility/mouse-look checks. Two-page PDF: output/pdf/mission-forge-player-guide.pdf; generator scripts/build_player_guide.py. No extra game dependencies. Physical Wi-Fi and Arch remain manual acceptance.
+
 ## Read first
 
 - Scope: only the Space Mission Design Game project. Earth_Detective is separate; do not modify it as part of this plan.

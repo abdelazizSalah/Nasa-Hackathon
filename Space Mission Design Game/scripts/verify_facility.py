@@ -42,7 +42,7 @@ shot('05-carried-payload')
 for c in CATEGORIES[1:]:
     x,z=station_position(c,'engineer',f.players);place(x,z-1)
     f.open_station(c);f.action('confirm',category=c);close()
-check(len(f.state['confirmed'])==5,'Single player confirms all four roles and five choices')
+check(len(f.state['confirmed'])==len(CATEGORIES),'Single player confirms all four roles and six choices')
 place(35.5,9,90);walk(20);check(h.pose.x<36.2,'Raised crossing blocks walking')
 h.handle_input('space');walk(35);check(h.pose.x>37.9,'Jump crosses raised cable passage')
 for _ in range(40):h.tick(.03)
@@ -55,7 +55,7 @@ check(h.pose.x>52 and not h.locomotion.crouch,'Crouch passage clears and standin
 place(72,6.5);shot('06-integration')
 for c in CATEGORIES:
     x,z=integration_target(c);place(x,z-1);f.action('submit',category=c)
-check(len(f.state['submitted'])==5,'Every component and both plan choices submit once')
+check(len(f.state['submitted'])==len(CATEGORIES),'Every component and all three plan choices submit once')
 place(72,6.5);f.open_validation();f.action('validate');check(not f.state['ready'],'Invalid selected design fails original checks')
 shot('07-validation-failed');close()
 for c,o in [('power','extended'),('radio','fast'),('launcher','heavy')]:

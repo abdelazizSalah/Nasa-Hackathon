@@ -7,7 +7,7 @@
     "baseline_power_w": 12, "storage_mb": 800,
     "baseline_description": "Structure, computer, attitude control and storage are included in the fixed bus. Ground-service cost covers the selected 12-month teaching scenario."
   },
-  "defaults": {"sensor": "basic", "power": "compact", "radio": "standard", "orbit": "regional", "launcher": "light"},
+  "defaults": {"sensor": "basic", "power": "compact", "radio": "standard", "orbit": "regional", "launcher": "light", "fuel": "solid"},
   "categories": [
     {"id": "sensor", "label": "Sensor", "options": [
       {"id": "basic", "label": "Basic", "name": "Basic imager", "mass_kg": 10, "cost_eur": 15000, "power_w": 20, "data_mb_min": 30, "quality": 1, "description": "Standard detail with lower power demand and data production."},
@@ -28,6 +28,31 @@
     {"id": "launcher", "label": "Launch option", "options": [
       {"id": "light", "label": "Light", "name": "Light launch", "capacity_kg": 70, "cost_eur": 18000, "allowed_orbits": ["regional"], "description": "A lower-cost launch supports up to 70 kg to the regional preset only."},
       {"id": "heavy", "label": "Heavy", "name": "Heavy launch", "capacity_kg": 100, "cost_eur": 30000, "allowed_orbits": ["regional", "wide"], "description": "A higher-cost launch supports both presets and more spacecraft mass."}
-    ]}
+    ]},
+    {
+      "id": "fuel",
+      "label": "Launch propellant",
+      "source_url": "https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/propulsion-system/",
+      "options": [
+        {
+          "id": "solid",
+          "label": "Solid",
+          "name": "Solid propellant launch plan",
+          "cost_eur": 0,
+          "control": "Usually burns to completion once ignited",
+          "storage": "Fuel and oxidizer premixed as a solid",
+          "description": "A premixed solid propellant offers a simpler stored motor, but normally cannot be shut down or throttled like a liquid engine. Included in the teaching launch price; this is a launch plan, not satellite fuel."
+        },
+        {
+          "id": "liquid",
+          "label": "Liquid",
+          "name": "Liquid propellant launch plan",
+          "cost_eur": 5000,
+          "control": "Propellant flow can control thrust; engine design matters",
+          "storage": "Separate fuel and oxidizer tanks and feed systems",
+          "description": "Separate liquid fuel and oxidizer feed an engine whose flow can be controlled, at the cost of more complex hardware and operations. The EUR 5,000 upgrade is a game assumption, not a NASA price or simulated thrust gain."
+        }
+      ]
+    }
   ]
 }

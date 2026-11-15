@@ -89,6 +89,10 @@ class Crew:
             kind=data.get('kind')
             if kind=='welcome':
                 self.role=data['role']; p=data['spawn']; self.hub.pose=Pose(p['x'],p['z'],p['yaw'])
+                self.hub.pitch=0
+                motion=self.hub.locomotion;motion.y=p.get('y',0);motion.velocity=0;motion.grounded=True;motion.crouch=False
+                self.hub.facility.message=''
+                self.hub.spawn_help_pending=True
                 self.message='Connected as '+self.role+' / N: crew details'
                 if self.hub.modal=='crew':self.open()
             elif kind=='players':

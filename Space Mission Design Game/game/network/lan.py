@@ -121,14 +121,20 @@ class Room:
             if action=='mission':
                 if role!='engineer':raise ValueError('Only the host selects the mission.')
                 self.assembly.select_mission(data.get('mission'),self.session);self.cards.add('purpose')
-            elif action=='confirm':
+            elif action in ('confirm','collect'):
                 category=data.get('category')
                 if category not in owned(role,self.players):raise ValueError('That subsystem belongs to your teammate.')
                 from game.domain.facility_layout import station_position
                 x,z=station_position(category,role,self.players)
                 p=self.players[role]
                 if math.hypot(p['x']-x,p['z']-z)>3.2:raise ValueError('Approach your assigned workshop table first.')
-                self.assembly.confirm(self.session,category,role)
+                if action=='collect':
+                    option=data.get('option');old=getattr(self.session.design,category)
+                    changed=self.assembly.collect(self.session,category,option,role,self.players)
+                    if changed:
+                        self.histories[role].append((category,old,option));self.histories[role]=self.histories[role][-30:]
+                    self.campaign.changed()
+                else:self.assembly.confirm(self.session,category,role)
             elif action=='carry':
                 self.assembly.carry(self.session,role,self.players,data.get('category'))
             elif action in ('submit','remove'):

@@ -2,6 +2,18 @@
 
 Implemented 2026-11-14. This extends the existing Ursina game, with no new dependencies.
 
+## Latest workstation revision (2026-11-15)
+
+All shared modal roots now adapt their scale and hitboxes together when resized or rebuilt; old panels are disabled/destroyed before replacement. Workstation dialogs show the existing rotating Spacecraft geometry, all shared resource values and an eight-check view. Rotation phase is retained through network refreshes. The in-world full spacecraft remains only at Integration; other world benches still display components/plan tablets.
+
+SELECT & PICK atomically validates ownership, workshop order and the candidate budget before mutating selection and collecting it. Recollecting an already placed option retrieves it and clears readiness. Legacy choose/confirm API actions remain for compatibility, but the player UI uses one button. Each initial main-game spawn and LAN welcome presents actual controls, with a Start Exploring action.
+
+Flight now owns Orbit, Launcher and **Launch Propellant**. A separate table at (58,6.2) selects Solid (bundled, EUR 0 extra) or Liquid (+EUR 5,000); all six choices must be submitted. Propellant is a launch-plan tablet, not satellite hardware. NASA references are linked from the fuel dialog and guide; the control/storage descriptions are qualitative, game pricing is fictional, and no thrust, propellant burn, rocket equation or spacecraft-mass effect is invented. Existing orbital/operations algorithms are unchanged; the budget includes the chosen launch-plan surcharge. Older design files omit fuel and therefore load with the Solid default, while old approvals are revalidated conservatively.
+
+57 automated tests pass, including real network collection for each crew size. The new workstation graphical harness verifies real UI collision rays through button centers after resize/refresh, spawn controls, model rotation, all six one-click selections, validation, and the documented successful Cached/Targeted run (120 MB, no loss/unserved energy, EUR 89k). The four-client harness verifies a teammate's changed power package updates an observer's open rotating preview. The two-page PDF was rendered and visually inspected, with two verified clickable NASA references. Detailed evidence remains ignored under runtime/workstation-upgrade/. Separate-laptop Wi-Fi and Arch acceptance are not claimed.
+
+New files: game/presentation/responsive.py, tests/test_workstations.py, scripts/verify_workstation_upgrade.py, scripts/build_player_guide.py, and output/pdf/mission-forge-player-guide.pdf at repository root. Existing tests/harnesses that counted five contributions now derive the total from CATEGORIES; nonmonetary engineering rules and Library data/modules remain unchanged. Earlier sections below describe the previous five-choice workflow and are historical where superseded.
+
 ## Latest revision: retrieval, red screen, stacks and mission EUR budgets
 
 This revision supersedes the original single-visible-item and credit-cost descriptions below. E retrieves an already placed owned component; a second E resubmits it. The host checks ownership, proximity and launch-busy state. Retrieval clears assembly and campaign approval, preserving unaffected contributions. The plan desk uses left/right and E for orbit/launcher tablets.

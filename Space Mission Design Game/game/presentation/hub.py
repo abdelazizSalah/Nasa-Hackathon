@@ -11,6 +11,7 @@ from ursina import (Entity, Text, Button, DirectionalLight, AmbientLight, camera
 from ursina.shaders import basic_lighting_shader, unlit_shader
 from game.domain.navigation import Pose, Obstacle, advance
 from game.domain.look import mouse_look
+from game.presentation.responsive import ResponsivePanel
 from game.domain.design import DesignSession
 from game.domain.economy import eur
 from game.presentation.spacecraft import Spacecraft
@@ -32,6 +33,7 @@ class Hub:
         self.locomotion=Locomotion()
         self.pitch = 0.
         self._look_ready=False
+        self.spawn_help_pending=False
         self.focused = True
         self.elapsed = 0.
         self.frames = 0
@@ -59,6 +61,9 @@ class Hub:
         camera.fov = 75
         mouse.locked = True
         self._sync_camera()
+
+    def show_spawn_instructions(self):
+        self.facility.open_help(welcome=True)
 
     def box(self, position, scale, tint=color.rgb32(38,55,72), solid=False, shader=True, **kwargs):
         entity = Entity(model='cube', position=position, scale=scale, color=tint,
@@ -142,7 +147,7 @@ class Hub:
             Entity(model='sphere', position=(rng.uniform(-35,35),rng.uniform(6,22),rng.uniform(-25,35)), scale=rng.uniform(.02,.06), color=MUTED)
 
     def _hud(self):
-        self.hud = Entity(parent=camera.ui)
+        self.hud = ResponsivePanel(parent=camera.ui,width=1.6)
         Entity(parent=self.hud, model='quad', position=(0,.435), scale=(1.6,.13), color=color.rgba32(5,13,24,240))
         Text('MISSION FORGE', parent=self.hud, position=(-.76,.475), scale=1.05, color=CYAN)
         self.location = Text('MISSION CONTROL', parent=self.hud, position=(.38,.465), scale=.7, color=MUTED)
@@ -229,6 +234,8 @@ class Hub:
                               'library':'E / Open aerospace books','design':'E / Engineering workshop directory'}.get(self.nearby(),'Learning Lab ahead / Spacecraft design bay on the right')
 
         self.facility.tick(dt)
+        if self.spawn_help_pending:
+            self.spawn_help_pending=False;self.facility.open_help(welcome=True)
 
     def toast(self,text):
         self.notice=text
@@ -275,11 +282,13 @@ class Hub:
             elif target=='design': self.facility.open_directory()
 
     def panel_base(self,kind,title,subtitle):
+        if self.panel is not None:self.close_panel()
         self.modal=kind
         mouse.locked=False
         self._look_ready=False
-        self.panel=Entity(parent=camera.ui)
+        self.panel=ResponsivePanel(parent=camera.ui)
         self.panel_dim=Entity(parent=self.panel, model='quad', scale=(4,3), z=.1, color=color.rgba32(2,7,14,215), collider='box')
+        self.panel.dimmer=self.panel_dim
         self.panel_background=Entity(parent=self.panel, model='quad', scale=(1.46,.82), color=NAVY)
         Entity(parent=self.panel, model='quad', position=(0,.397,-.01), scale=(1.46,.012),color=CYAN)
         Text(title,parent=self.panel,position=(-.67,.365,-.02),scale=1.3,color=CYAN)

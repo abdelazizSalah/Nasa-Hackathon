@@ -4,6 +4,8 @@ import json
 import math
 import textwrap
 from ursina import Entity, Text, Button, color, destroy, camera, scene
+from game.presentation.spacecraft import Spacecraft
+from game.library.content import ReferenceOpener
 from game.domain.design import evaluate
 from game.domain.economy import eur
 from game.domain.assembly import Assembly, ROLES, CATEGORIES, assignments, owned, missions
@@ -22,6 +24,8 @@ class Facility:
         self.hub=hub;self.solo=Assembly();self.shared=None;self.signature=None;self.table_obstacles=[]
         self.tables=Entity();self.placements=Entity();self.local_hand=Entity(parent=camera)
         self.volumes=[];self.elapsed=0;self.detail_category='sensor';self.feedback_page=0;self.message='';self.plan_category='orbit'
+        self.preview=None;self.preview_yaw=-25;self.tradeoff_view='resources'
+        self.sources=ReferenceOpener({'fuel':{'url':'https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/propulsion-system/'}})
         self.build()
         self.refresh_world()
 
@@ -73,6 +77,8 @@ class Facility:
                 h.box((xx,2.8,13.67),(.025,1.2,.025),CYAN,shader=False)
             h.box((x,3.9,9),(8,.06,.12),CYAN,shader=False)
             self.volumes.append(Volume(x,9,14,10,4,4.3))
+        h.box((58,.5,6.2),(1.6,1,1.2),color.rgb32(35,57,73),solid=True)
+        self.fuel_sign=self.label('LAUNCH PROPELLANT',(58,1.65,5.53),.08)
         h.box((79,2,9),(.25,4,10),solid=True)
         # Both traversal features fit the connecting apertures; walking never bypasses validation.
         h.box((37,.225,9),(1.2,.45,3.4),color.rgb32(207,143,59))
@@ -90,7 +96,7 @@ class Facility:
             self.label(category.upper(),(x,1.05,z-.02),.075)
             h.targets.append(('place:'+category,(x,0,z-1)))
         h.box((76,.55,11.5),(1.8,1.1,1),solid=True)
-        self.label('MISSION PLAN\nORBIT + LAUNCHER',(76,1.5,11.1),.08)
+        self.label('MISSION PLAN\nORBIT / LAUNCHER / FUEL',(76,1.5,11.1),.08)
         h.targets.append(('plan-submit',(76,0,10.4)))
         h.box((68,1.88,13.64),(5.5,2.6,.12),color.rgb32(6,16,25),shader=False)
         self.integration_sign=Text('',parent=scene,position=(65.45,2.98,13.54),scale=6.2,color=CYAN)
@@ -124,6 +130,10 @@ class Facility:
             if action=='mission':self.solo.select_mission(fields['mission'],s);h.read_cards.add('purpose');h.refresh_resources()
             elif action=='choose':
                 if s.choose(c,fields['option']):h.design_changed()
+            elif action=='collect':
+                changed=self.solo.collect(s,c,fields['option'],self.player,self.players)
+                if changed:h.design_changed()
+                else:h.mission.campaign.changed()
             elif action=='confirm':self.solo.confirm(s,c,self.player)
             elif action=='carry':self.solo.carry(s,self.player,self.players,c)
             elif action=='submit':self.solo.submit(s,c,self.player,self.players)
@@ -160,17 +170,22 @@ class Facility:
                     for i,c in enumerate(categories):
                         Part(c,s.design,parent=self.tables,position=(x+(.4*i),1.18,z),scale=.27)
                     self.label('Choices: '+' / '.join(getattr(s.design,c) for c in categories),(x,.73,z-.66),.055,MUTED,self.tables)
+        owner=next((p for p in self.players if 'fuel' in owned(p,self.players)),None)
+        self.fuel_sign.text='LAUNCH PROPELLANT / '+s.design.fuel.upper()+'\n'+str(owner or 'Waiting for crew')+' / E to configure'
+        Part('fuel',s.design,parent=self.tables,position=(58,1.14,6.2),scale=.35)
         destroy(self.placements);self.placements=Entity()
         for c,item in state['submitted'].items():
             x,z=integration_target(c)
-            if c in ('orbit','launcher'):x+=-.4 if c=='orbit' else .4
+            if c in ('orbit','launcher','fuel'):x+= {'orbit':-.55,'launcher':0,'fuel':.55}[c]
             part=Part(c,s.design,parent=self.placements,position=(x,1.6,z+.35),scale=.4)
-            part.destination_y=1.2 if c in ('orbit','launcher') else 1.45
+            part.destination_y=1.2 if c in ('orbit','launcher','fuel') else 1.45
             self.label(c+' / '+item['by'],(x,1.65,z+.1),.05,CYAN,self.placements)
         self.update_screen(state)
         self.mission_sign.text='MISSION SELECT\n'+('Flood Watch / SELECTED' if state['mission'] else 'Flood Watch / available')
 
     def tick(self,dt):
+        if self.hub.modal=='workshop' and self.preview is not None:
+            self.preview_yaw+=dt*8;self.preview.root.rotation_y=self.preview_yaw
         self.elapsed+=dt;self.help.y=1.7+.07*math.sin(self.elapsed*1.6)
         state=self.state
         signature=json.dumps((state,asdict(self.hub.design_session.design),{p:v['name'] for p,v in self.players.items()}),sort_keys=True)
@@ -188,9 +203,9 @@ class Facility:
             missing=[c for c in CATEGORIES if c not in state['confirmed']]
             if not state['mission']:message='SELECT / Use the mission screen beside the Earth display'
             elif missing:
-                title,_,_=next(room for room in ROOMS if missing[0] in room[2])
+                title,_,_=next(room for room in ROOMS if missing[0] in room[2]) if missing[0]!='fuel' else ('Launch Propellant',58,('fuel',))
                 message='CONFIGURE / '+title+' / Confirm '+missing[0]+' at its assigned workstation'
-            elif len(state['submitted'])<5:message=f'INTEGRATE / {len(state["submitted"])}/5 contributions submitted / I opens your carried inventory'
+            elif len(state['submitted'])<len(CATEGORIES):message=f'INTEGRATE / {len(state["submitted"])}/{len(CATEGORIES)} contributions submitted / I opens your carried inventory'
             elif state['issues']:message='REVISE / Read the RED screen on the left of Integration / E retrieves a placed part'
             elif not state['ready']:message='VALIDATE / Approach the central integration console / host approval required'
             else:message='APPROVED / Walk to Launch Readiness and launch with the flight engineer'
@@ -200,10 +215,10 @@ class Facility:
         issues=state['issues'];count=len(state['submitted'])
         self.integration_sign.color=RED if issues else CYAN
         self.integration_sign.text=('DESIGN APPROVED' if state['ready'] else 'VALIDATION FAILED' if issues else
-                                    'READY FOR VALIDATION' if count==5 else 'AWAITING CONTRIBUTIONS')
+                                    'READY FOR VALIDATION' if count==len(CATEGORIES) else 'AWAITING CONTRIBUTIONS')
         remaining=state['budget_eur']-state['cost_eur']
         self.integration_budget.color=RED if remaining<0 else CYAN
-        self.integration_budget.text=f"Cost {eur(state['cost_eur'])} / Budget {eur(state['budget_eur'])}\n"+('OVER BUDGET: '+eur(-remaining) if remaining<0 else 'Available: '+eur(remaining))+f' / Placed {count}/5'
+        self.integration_budget.text=f"Cost {eur(state['cost_eur'])} / Budget {eur(state['budget_eur'])}\n"+('OVER BUDGET: '+eur(-remaining) if remaining<0 else 'Available: '+eur(remaining))+f' / Placed {count}/{len(CATEGORIES)}'
         if issues:
             page=int(self.elapsed/7)%math.ceil(len(issues)/2);visible=issues[page*2:page*2+2]
             lines=[]
@@ -220,11 +235,17 @@ class Facility:
             self.integration_details.text+='\n\n'+('Flight engineer: proceed to Launch Readiness.' if state['ready'] else 'E places / removes parts at their marked locations.\nSubmit all choices, then ask the host to validate.')
 
     def nearby(self):
-        h=self.hub
+        h=self.hub;candidates=[]
         for _,_,categories in ROOMS:
             for player in self.players:
                 x,z=station_position(categories[0],player,self.players)
-                if math.hypot(h.pose.x-x,h.pose.z-z)<2.5:return 'station:'+player+':'+categories[0]
+                distance=math.hypot(h.pose.x-x,h.pose.z-z)
+                if distance<2.5:candidates.append((distance,'station:'+player+':'+categories[0]))
+        if self.players:
+            player=next(p for p in self.players if 'fuel' in owned(p,self.players))
+            distance=math.hypot(h.pose.x-58,h.pose.z-6.2)
+            if distance<2.5:candidates.append((distance,'station:'+player+':fuel'))
+        if candidates:return min(candidates)[1]
         target=h.nearby()
         return target if target in ('mission-select','controls-help','validate','issues-display','plan-submit','launch-console') or (target or '').startswith('place:') else None
 
@@ -275,39 +296,70 @@ class Facility:
         self.detail_category=category;self.station_player=player or self.player
         self.panel('workshop','ENGINEERING WORKSTATION',self.station_player+' / '+', '.join(ROLES[r][0] for r in assignments(self.players).get(self.station_player,[])))
         s=self.hub.design_session;cat=next(c for c in s.catalog['categories'] if c['id']==category)
-        self.txt(cat['label'].upper(),-.64,.24,1,CYAN)
+        self.txt(cat['label'].upper(),-.65,.25,.85,CYAN)
+        self.preview=Spacecraft(self.hub.panel,position=(.42,.19,-.12),scale=.095)
+        self.preview.apply(s.design);self.preview.root.rotation_y=self.preview_yaw
+        self.txt('LIVE SPACECRAFT / SHARED DESIGN',.16,.255,.56,CYAN,width=48)
+        self.txt(s.design.orbit+' / '+s.design.launcher+' / '+s.design.fuel,.16,.13,.56,MUTED,width=50)
         allowed=self.station_player==self.player and self.can(category) and not self.hub.network.busy
         for i,option in enumerate(cat['options']):
-            x=-.63+i*.65;chosen=option['id']==getattr(s.design,category)
-            self.txt(option['name']+(' / SELECTED' if chosen else ''),x,.17,.88,CYAN if chosen else color.white,width=41)
-            self.txt(option['description'],x,.10,.73,MUTED,width=46)
+            x=-.65+i*.40;chosen=option['id']==getattr(s.design,category)
+            self.txt(option['label'].upper()+(' / CURRENT' if chosen else ''),x,.205,.74,CYAN if chosen else color.white,width=25)
+            self.txt(option['description'],x,.16,.60,MUTED,width=30)
             price=option.get('cost_eur',option.get('ground_cost_eur',0))
-            self.txt('PRICE '+eur(price)+(' / ground service' if category=='orbit' else ''),x,.045,.78,CYAN)
+            self.txt('PRICE '+eur(price),x,.025,.67,CYAN)
             projected=evaluate(s.catalog,replace(s.design,**{category:option['id']})).values['cost_eur']
             remaining=s.catalog['scenario']['budget_eur']-projected
-            self.txt('Total '+eur(projected)+' / '+('Remaining '+eur(remaining) if remaining>=0 else 'OVER by '+eur(-remaining)),x,-.025,.66,RED if remaining<0 else MUTED,width=47)
+            self.txt('Total '+eur(projected)+' / '+('Left '+eur(remaining) if remaining>=0 else 'OVER '+eur(-remaining)),x,-.015,.55,RED if remaining<0 else MUTED,width=31)
             specs=' / '.join(f'{k.replace("_"," ")}: {v}' for k,v in option.items() if k not in ('id','label','name','description','cost_eur','ground_cost_eur'))
-            self.txt(specs,x,-.07,.61,color.white,width=49)
-            self.btn('SELECT '+option['label'].upper(),x+.27,-.16,.52,lambda c=category,o=option['id']:self.action('choose',category=c,option=o),not allowed)
-        self.btn('CONFIRM & COLLECT',-.30,-.26,.60,lambda:self.action('confirm',category=category),not allowed or s.preview.values['cost_eur']>s.catalog['scenario']['budget_eur'])
+            self.txt(specs,x,-.06,.54,color.white,width=31)
+            self.btn('SELECT & PICK '+option['label'].upper(),x+.17,-.22,.35,lambda c=category,o=option['id']:self.action('collect',category=c,option=o),not allowed or remaining<0)
         if category in ('orbit','launcher'):
             other='launcher' if category=='orbit' else 'orbit'
-            self.btn('VIEW '+other.upper(),.36,-.26,.50,lambda:self.open_station(other,self.station_player))
-        state=self.state;status='Confirmed / stacked with your carried parts' if state['confirmed'].get(category)==getattr(s.design,category) else 'Awaiting explicit confirmation'
-        over=s.preview.values['cost_eur']>s.catalog['scenario']['budget_eur']
-        if over:status='OVER BUDGET / reduce costs before collecting'
-        self.txt(status+' / Budget '+eur(s.catalog['scenario']['budget_eur'])+' / Total '+eur(s.preview.values['cost_eur']),-.64,-.34,.66,RED if over else MUTED)
+            self.btn('VIEW '+other.upper(),-.42,-.295,.44,lambda:self.open_station(other,self.station_player))
+        elif category=='fuel':self.btn('NASA / HOW ROCKETS WORK',-.42,-.295,.44,lambda:self.sources.open('fuel'))
+        self.txt(('Chosen option is collected with ONE click.' if allowed else 'Read-only / this table belongs to another role.'),-.65,-.35,.57,MUTED,width=62)
+        if self.tradeoff_view=='resources':
+            v=s.preview.values
+            lines=[f"Mass: {v['mass_kg']:g} / {v['launch_capacity_kg']:g} kg",
+                   f"Mass margin: {v['mass_margin_kg']:+g} kg",
+                   f"Cost: {eur(v['cost_eur'])} / {eur(s.catalog['scenario']['budget_eur'])}",
+                   f"Budget remaining: {eur(v['budget_margin_eur'])}",f"Science grade: {v['quality']}",
+                   f"Peak load / generation: {v['peak_power_w']:g} / {v['generation_w']:g} W",
+                   f"Power margin: {v['power_margin_w']:+g} W",
+                   f"Battery capacity / minimum: {v['battery_capacity_wh']:g} / {v['min_battery_wh']:.1f} Wh",
+                   f"Battery at end: {v['final_battery_wh']:.1f} Wh",
+                   f"Eclipse / contact: {v['eclipse_min']:g} / {v['contact_min']:g} min",
+                   f"Expected / produced: {v['expected_data_mb']:g} / {v['generated_mb']:.0f} MB",
+                   f"Delivered: {v['delivered_mb']:.0f} MB",f"Stored at end: {v['stored_mb']:.0f} MB",
+                   f"Peak storage / capacity: {v['max_storage_mb']:.0f} / {v['storage_capacity_mb']:g} MB",
+                   f"Overflow: {v['overflow_mb']:.0f} MB",f"Unserved load: {v['unserved_energy_wh']:.2f} Wh",
+                   f"Solar / used: {v['solar_energy_wh']:.1f} / {v['used_energy_wh']:.1f} Wh",
+                   f"Curtailed energy: {v['curtailed_energy_wh']:.1f} Wh",
+                   f"Preview checks passed: {sum(c.passed for c in s.preview.checks)} / {len(s.preview.checks)}"]
+            text='\n'.join(lines)
+        else:
+            lines=[]
+            for check in s.preview.checks:
+                lines+=textwrap.wrap(('PASS / ' if check.passed else 'FAIL / ')+check.label+': '+check.explanation,54)
+            text='\n'.join(lines)
+        Text(text,parent=self.hub.panel,position=(.16,.095,-.05),scale=.62 if self.tradeoff_view=='resources' else .55,color=MUTED)
+        self.btn('SHOW CHECKS' if self.tradeoff_view=='resources' else 'SHOW ALL PROPERTIES',.42,-.34,.48,self.toggle_tradeoffs)
+
+    def toggle_tradeoffs(self):
+        self.tradeoff_view='checks' if self.tradeoff_view=='resources' else 'resources'
+        self.open_station(self.detail_category,self.station_player)
 
     def open_submission(self):
         self.panel('submission','MISSION PLAN SUBMISSION','Left/right: select plan / E: submit or remove the selected plan / Esc: close')
-        for i,c in enumerate(('orbit','launcher')):
+        for i,c in enumerate(('orbit','launcher','fuel')):
             self.txt(('SELECTED / ' if c==self.plan_category else '')+c.upper()+' / '+getattr(self.hub.design_session.design,c),-.63,.20-i*.18,.95,CYAN)
             self.btn(('REMOVE ' if c in self.state['submitted'] else 'SUBMIT ')+c.upper()+' / E',.35,.14-i*.18,.52,lambda category=c:self.action('remove' if category in self.state['submitted'] else 'submit',category=category),not self.can(c))
-        self.txt('Each contribution is tied to the current confirmed selection.',-.63,-.27,.75,MUTED)
+        self.txt('Each contribution is tied to the current confirmed selection.',-.63,-.34,.75,MUTED)
 
     def handle_plan_input(self,key):
         if key in ('left arrow','right arrow'):
-            self.plan_category='launcher' if self.plan_category=='orbit' else 'orbit';self.open_submission()
+            plans=('orbit','launcher','fuel');self.plan_category=plans[(plans.index(self.plan_category)+(1 if key=='right arrow' else -1))%3];self.open_submission()
         elif key=='e':self.action('remove' if self.plan_category in self.state['submitted'] else 'submit',category=self.plan_category)
 
     def open_validation(self,page=0):
@@ -316,7 +368,7 @@ class Facility:
         state=self.state
         reports=sorted(state['validation'],key=lambda r:r['passed'])
         failures=sum(not r['passed'] for r in reports)
-        title='SPACECRAFT DESIGN APPROVED' if state['ready'] else f'VALIDATION NEEDS REVISION / {failures} failed checks' if failures else f'{len(state["submitted"])}/5 choices submitted / host validation required'
+        title='SPACECRAFT DESIGN APPROVED' if state['ready'] else f'VALIDATION NEEDS REVISION / {failures} failed checks' if failures else f'{len(state["submitted"])}/{len(CATEGORIES)} choices submitted / host validation required'
         self.txt(title,-.63,.235,1,CYAN if not failures else RED)
         if reports:
             report=reports[page%len(reports)]
@@ -328,24 +380,26 @@ class Facility:
             self.btn('PREV CHECK',-.43,-.20,.30,lambda:self.open_validation(page-1))
             self.btn('NEXT CHECK',-.05,-.20,.30,lambda:self.open_validation(page+1))
         else:
-            self.txt('Submit payload, power and radio at their marked locations. Submit orbit and launcher at the mission-plan station. Every role must contribute before validation.',-.63,.12,.86,MUTED,width=95)
-        self.btn('RUN HOST VALIDATION',-.34,-.29,.60,lambda:self.action('validate'),not self.host() or len(state['submitted'])<5 or self.hub.network.busy)
+            self.txt('Submit payload, power and radio at their marked locations. Submit orbit, launcher and propellant at the mission-plan station. Every role must contribute before validation.',-.63,.12,.86,MUTED,width=95)
+        self.btn('RUN HOST VALIDATION',-.34,-.29,.60,lambda:self.action('validate'),not self.host() or len(state['submitted'])<len(CATEGORIES) or self.hub.network.busy)
         self.btn('MISSION CONTROL',.34,-.29,.60,self.hub.mission.open,not state['ready'])
 
-    def open_help(self):
-        self.panel('controls','FLIGHT DECK CONTROLS','Mouse look while exploring / free cursor in books and consoles')
+    def open_help(self,welcome=False):
+        self.panel('controls','WELCOME / FLIGHT DECK CONTROLS' if welcome else 'FLIGHT DECK CONTROLS','Mouse look while exploring / free cursor in books and consoles')
         lines=['[ W / S ]  Walk forward / backward','[ A / D ]  Strafe left / right','[ MOUSE ]  Look up / down / left / right (arrows also turn)',
                '[ SPACE ]  Jump (grounded only)','[ LEFT / RIGHT ALT ]  Hold to crouch','[ E ]  Use a nearby door, station or placement location',
                '[ I ]  Inventory / E places or removes a marked contribution','[ LEFT MOUSE ]  Select covers and interface buttons',
                '[ M ]  Mission tablet    [ N ]  LAN crew','[ ESC ]  Close menu / book / pause; resume mouse look']
         for i,line in enumerate(lines):self.txt(line,-.63,.23-i*.05,.76,CYAN if i in (3,4) else color.white)
 
+        if welcome:self.btn('START EXPLORING',.35,-.34,.55,self.hub.close_panel)
+
     def open_inventory(self):
         self.panel('inventory','CARRIED STACK / YOUR ROLES',self.player+' / '+', '.join(ROLES[r][0] for r in assignments(self.players).get(self.player,[])))
         inventory=self.state['inventory'].get(self.player,[])
         for i,c in enumerate(inventory):
-            self.txt(c.upper()+' / '+getattr(self.hub.design_session.design,c),-.63,.2-i*.09,.85,CYAN)
-            self.btn('STACK BASE',.42,.19-i*.09,.28,lambda category=c:self.action('carry',category=category))
+            self.txt(c.upper()+' / '+getattr(self.hub.design_session.design,c),-.63,.2-i*.075,.85,CYAN)
+            self.btn('STACK BASE',.42,.19-i*.075,.28,lambda category=c:self.action('carry',category=category))
         if not inventory:self.txt('No unsubmitted confirmed parts. Confirm choices at your assigned workshop.',-.63,.16,.8,MUTED)
 
     def refresh_modal(self):
