@@ -5,6 +5,7 @@ from pathlib import Path
 import random
 import textwrap
 import webbrowser
+import sys
 
 from ursina import (Entity, Text, Button, DirectionalLight, AmbientLight, camera,
                     color, held_keys, mouse, application, scene, destroy)
@@ -30,7 +31,10 @@ AMBER = color.rgb32(255, 190, 89)
 
 
 class Hub:
-    def __init__(self):
+    def __init__(self,mouse_mode='auto'):
+        from game.presentation.desktop import PointerCapture
+        self.desktop_mouse=PointerCapture(application.base.win,mouse_mode) if sys.platform.startswith('linux') or mouse_mode!='auto' else None
+        self._focus_click_required=False
         self.cards = json.loads((ROOT / 'content/learning_cards.json').read_text(encoding='utf-8'))['cards']
         self.settings_path=RUNTIME/'player_settings.json'
         self.sprint_speed=5.4
@@ -69,7 +73,7 @@ class Hub:
         from game.presentation.facility import Facility
         self.facility=Facility(self)
         camera.fov = 75
-        mouse.locked = True
+        mouse.locked = self.desktop_mouse is None
         self._sync_camera()
 
     def show_spawn_instructions(self):
@@ -179,9 +183,13 @@ class Hub:
         camera.rotation=(self.pitch,self.pose.yaw,0)
 
     def _update_mouse_look(self):
-        if self.modal is not None or not self.focused:
-            if mouse.locked:mouse.locked=False
+        if self.modal is not None or not self.focused or self._focus_click_required:
+            self.release_mouse()
             self._look_ready=False
+            return
+        if self.desktop_mouse:
+            dx,dy=self.desktop_mouse.sample(dragging=mouse.right)
+            self.pose,self.pitch=mouse_look(self.pose,self.pitch,dx,dy)
             return
         if not mouse.locked:
             mouse.locked=True
@@ -192,6 +200,18 @@ class Hub:
             self._look_ready=True
             return
         self.pose,self.pitch=mouse_look(self.pose,self.pitch,mouse.velocity.x,mouse.velocity.y)
+
+    def release_mouse(self):
+        if mouse.locked:mouse.locked=False
+        if self.desktop_mouse:self.desktop_mouse.release()
+        self._look_ready=False
+
+    def set_focus(self,focused):
+        if self.focused==focused:return
+        self.focused=focused;self.release_mouse()
+        if self.desktop_mouse:
+            self._focus_click_required=focused and self.modal is None
+        if self._focus_click_required:self.toast('Click inside the game to resume mouse look.')
 
     def nearby(self):
         candidates = [('door',(0,0,5)),*self.targets]
@@ -250,6 +270,10 @@ class Hub:
                               'library':'E / Open aerospace books','design':'E / Engineering workshop directory'}.get(self.nearby(),'Learning Lab ahead / Spacecraft design bay on the right')
 
         self.facility.tick(dt)
+        if self.modal is None and self._focus_click_required:
+            self.prompt.text='Click inside the game to resume mouse look'
+        elif self.modal is None and self.desktop_mouse and self.desktop_mouse.mode=='drag':
+            self.prompt.text='Hold right mouse button and move the mouse to look / Esc: menu'
         if self.spawn_help_pending:
             self.spawn_help_pending=False;self.facility.open_help(welcome=True)
 
@@ -258,6 +282,8 @@ class Hub:
         self.notice_until=self.elapsed+3
 
     def handle_input(self,key):
+        if key=='left mouse down' and self.modal is None and self._focus_click_required:
+            self._focus_click_required=False;self.release_mouse();return
         if key=='n' and self.modal is None:
             self.network.open(); return
         if self.modal=='flight':
@@ -301,7 +327,7 @@ class Hub:
         if self.panel is not None:self.close_panel()
         self.modal=kind
         self.hud.enabled=False
-        mouse.locked=False
+        self.release_mouse()
         self._look_ready=False
         self.panel=ResponsivePanel(parent=camera.ui)
         self.panel_dim=Entity(parent=self.panel, model='quad', scale=(4,3), z=.1, color=color.rgba32(2,7,14,215), collider='box')
@@ -399,7 +425,9 @@ class Hub:
         self.modal=None
         self.hud.enabled=True
         self.design_panel=None
-        mouse.locked=bool(self.focused)
+        if self.desktop_mouse:
+            self.release_mouse();self._focus_click_required=False
+        else:mouse.locked=bool(self.focused)
         self._look_ready=False
 
     def evidence(self):

@@ -9,6 +9,10 @@ from game.presentation.hub import Hub
 
 app=Ursina(size=(1280,800),borderless=False,development_mode=False,editor_ui_enabled=False)
 h=Hub()
+# This harness injects Ursina velocity to exercise the legacy path on any OS.
+# Native pointer/focus/projection paths have verify_desktop_recovery.py instead.
+if h.desktop_mouse:
+    h.desktop_mouse.release();h.desktop_mouse=None;mouse.locked=True
 def move(dx,dy):
     mouse.velocity=Vec3(dx,dy,0);h.tick(.016)
 move(0,0);move(.1,.1)

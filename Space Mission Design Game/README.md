@@ -8,6 +8,14 @@ Windows users can open [Game executable](../play/windows/MissionForge.exe) at re
 
 Maintainers: install `requirements-build.txt`, run `python scripts/build_executable.py`, then test `../play/windows/MissionForge.exe --verify-package`. The Windows binary was verified at 1920x1080 with OpenGL, bundled books/materials, cached science success and real localhost full 2/3/4-player missions. Linux binary builds have a manual GitHub Actions workflow; native Arch acceptance remains pending. Rebuild and commit the binary/checksum with source updates so cloned copies stay synchronized.
 
+## Ubuntu / Linux window and mouse recovery
+
+Linux now starts in a **normal titled 1280x720 window** for reliable desktop switching; Windows still starts fullscreen. F11 toggles desktop-sized mode on Linux without an exclusive resolution change. After Alt-Tab back, click inside the game to resume mouse look; focus loss releases capture and freezes walking. The camera uses actual client dimensions and a consistent vertical field of view so wide VM displays do not zoom the scene.
+
+For Ubuntu/VMware, try `.venv/bin/python main.py --windowed --mouse-mode warp`. If mouse integration blocks cursor warping, use `--mouse-mode drag` and **hold the right mouse button to look**. Auto mode tries relative input and falls back when XF86-DGA is unavailable. See [Ubuntu installation and recovery](installation_on_Ubuntu.md) for setup and manual checks. No new game packages are needed if the environment is already installed.
+
+Verified **74 automated tests**, the existing mouse-look harness, and controlled native-window rendering/focus tests at 1280x720, 2560x974 and 900x900. Linux mode requests and input failures are covered with simulated backends; physical GNOME/VM Alt-Tab and mouse acceptance remain manual. Run `python scripts/verify_desktop_recovery.py`; evidence is ignored under `runtime/desktop-recovery/`.
+
 ## Screenshots
 
 Explore the game from mission selection and learning to spacecraft design, validation and launch.

@@ -61,7 +61,9 @@ Set `GMAT_BIN` to the GMAT installation directory or `bin/GmatConsole.exe` befor
 
 Choose **Source: Live** in M. Preparation may take time; failures are shown rather than silently switching to Cached. Friends can use Cached or join the host without installing GMAT.
 
-## Linux / Arch
+## Linux / Ubuntu / Arch
+
+For source runs, see [Ubuntu setup and desktop recovery](../Space%20Mission%20Design%20Game/installation_on_Ubuntu.md). Linux starts windowed; F11 toggles a desktop-sized window. After returning with Alt-Tab, click inside the game to resume looking. For VMs use `.venv/bin/python main.py --windowed --mouse-mode warp`, or `--mouse-mode drag` and hold the right mouse button if cursor warping is blocked.
 
 The checked-in `.exe` is a **Windows binary**, not a Linux executable. A native Linux binary must be built on Linux; this Windows workspace cannot verify it. Maintainers can run the repository's **Build Mission Forge** GitHub Actions workflow and download the Linux artifact, or build locally using [the game setup instructions](../Space%20Mission%20Design%20Game/README.md) followed by:
 

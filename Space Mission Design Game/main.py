@@ -12,7 +12,10 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--smoke-seconds',type=float,default=0,help='Auto-close after rendering; 0 stays open')
     parser.add_argument('--engine-check',action='store_true',help='Run the original Phase 1 renderer scene')
-    parser.add_argument('--windowed',action='store_true',help='Use a resizable window instead of default fullscreen')
+    modes=parser.add_mutually_exclusive_group()
+    modes.add_argument('--windowed',action='store_true',help='Start in a normal resizable window')
+    modes.add_argument('--fullscreen',action='store_true',help='Fill the desktop (Linux: borderless window without display-mode switching)')
+    parser.add_argument('--mouse-mode',choices=('auto','warp','drag'),default='auto',help='Mouse capture fallback: auto, pixel recentering, or right-button drag for VMs')
     parser.add_argument('--verify-package',action='store_true',help='Check bundled assets, cached mission and 2/3/4-player local TCP, then render briefly')
     args=parser.parse_args()
     if args.smoke_seconds<0: parser.error('--smoke-seconds must be non-negative')
@@ -29,8 +32,9 @@ def main():
     application.asset_folder=root
     evidence_path=runtime/'graphics-smoke.json'
     evidence_path.unlink(missing_ok=True)
+    from game.presentation.desktop import startup_window,DesktopDisplay
     app=Ursina(title='Mission Forge | '+('Engine Check' if args.engine_check else 'Mission Design'),
-               size=(1280,800) if args.windowed else None,fullscreen=not args.windowed,borderless=not args.windowed,development_mode=False,editor_ui_enabled=False)
+               **startup_window(sys.platform,args.windowed,args.fullscreen),development_mode=False,editor_ui_enabled=False)
     window.color=color.rgb32(6,12,25)
     window.fps_counter.enabled=False
     window.exit_button.enabled=False
@@ -39,24 +43,34 @@ def main():
         experience=EngineCheck()
     else:
         from game.presentation.hub import Hub
-        experience=Hub()
+        experience=Hub(mouse_mode=args.mouse_mode)
         experience.show_spawn_instructions()
+    from ursina import camera
+    display=DesktopDisplay(app,window,camera,linux=sys.platform.startswith('linux'))
+    if sys.platform.startswith('linux') and args.fullscreen:display.set_fullscreen(True)
+    # Ursina also handles F11 internally; keep one owner for this toggle.
+    original_window_input=window.input_entity.input
+    window.input_entity.input=lambda key: original_window_input(key) if key!='f11' else None
     state={'elapsed':0.,'frames':0}
     def update():
         state['elapsed']+=time.dt
         state['frames']+=1
-        focused=app.win.get_properties().get_foreground()
+        properties=app.win.get_properties()
+        focused=properties.get_foreground() and not properties.get_minimized()
         if hasattr(experience,'focused') and experience.focused != focused:
             from ursina import mouse
-            experience.focused=focused
-            mouse.locked=False
+            if hasattr(experience,'set_focus'):experience.set_focus(focused)
+            else:experience.focused=focused;mouse.locked=False
         if not focused:
             held_keys.clear()
         experience.tick(time.dt)
+        display.update()
         if args.smoke_seconds and state['elapsed']>=args.smoke_seconds: application.quit()
     sys.modules['__main__'].update=update
     def handle_input(key):
-        if key=='f11':window.fullscreen=not window.fullscreen;return
+        if key=='f11':
+            if hasattr(experience,'release_mouse'):experience.release_mouse()
+            display.toggle();return
         experience.handle_input(key)
     sys.modules['__main__'].input=handle_input
     def finish():
@@ -73,7 +87,10 @@ def main():
             'python':platform.python_version(),'ursina':version('ursina'),
             'renderer':gsg.get_driver_renderer(),'vendor':gsg.get_driver_vendor(),
             'frames':state['frames'],'elapsed_seconds':state['elapsed'],
-            'fullscreen':bool(window.fullscreen),'window_size':list(app.win.get_size()),
+            'fullscreen':display.fullscreen,'window_size':list(app.win.get_size()),
+            'display_mode':'desktop' if display.linux and display.fullscreen else 'fullscreen' if display.fullscreen else 'windowed',
+            'camera_fov':list(camera.lens.get_fov()),
+            'mouse_mode':getattr(getattr(experience,'desktop_mouse',None),'mode',None) or 'ursina',
             'status':'rendered','user_acceptance':'pending',**experience.evidence(),
         },indent=2),encoding='utf-8')
     try: app.run()
